@@ -1,0 +1,83 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Run test suite
+      id: run-test-suite
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Run test suite
+        setup-command: python -m pip install --upgrade pip; pip install flask; pip
+          install psycopg2; pip install records; curl -o ProductionCode/psql_config.py
+          https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+        command: python3 -m unittest discover -s Tests
+        timeout: 10
+    - name: Coverage
+      id: coverage
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Coverage
+        setup-command: python -m pip install --upgrade pip; pip install coverage;
+          pip install flask; pip install psycopg2; pip install records; curl -o ProductionCode/psql_config.py
+          https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+        command: python3 -m coverage run --source ProductionCode,flask_app,command_line
+          -m unittest discover Tests; python3 -m coverage report -m
+        timeout: 10
+    - name: Style check ProductionCode
+      id: style-check-productioncode
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Style check ProductionCode
+        setup-command: python -m pip install --upgrade pip; pip install pylint; curl
+          -o ProductionCode/psql_config.py https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+        command: pylint --disable=import-error,too-few-public-methods ProductionCode
+        timeout: 10
+    - name: Style check Tests
+      id: style-check-tests
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Style check Tests
+        setup-command: python -m pip install --upgrade pip; pip install pylint; curl
+          -o ProductionCode/psql_config.py https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+        command: pylint --disable=import-error,too-few-public-methods Tests
+        timeout: 10
+    - name: Style check Command Line
+      id: style-check-command-line
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Style check Command Line
+        setup-command: python -m pip install --upgrade pip; pip install pylint; curl
+          -o ProductionCode/psql_config.py https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+        command: pylint --disable=import-error,too-few-public-methods command_line.py
+        timeout: 10
+    - name: Style check Flask App
+      id: style-check-flask-app
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Style check Flask App
+        setup-command: python -m pip install --upgrade pip; pip install pylint; curl
+          -o ProductionCode/psql_config.py https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+        command: pylint --disable=import-error,too-few-public-methods flask_app.py
+        timeout: 10
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        RUN-TEST-SUITE_RESULTS: "${{steps.run-test-suite.outputs.result}}"
+        COVERAGE_RESULTS: "${{steps.coverage.outputs.result}}"
+        STYLE-CHECK-PRODUCTIONCODE_RESULTS: "${{steps.style-check-productioncode.outputs.result}}"
+        STYLE-CHECK-TESTS_RESULTS: "${{steps.style-check-tests.outputs.result}}"
+        STYLE-CHECK-COMMAND-LINE_RESULTS: "${{steps.style-check-command-line.outputs.result}}"
+        STYLE-CHECK-FLASK-APP_RESULTS: "${{steps.style-check-flask-app.outputs.result}}"
+      with:
+        runners: run-test-suite,coverage,style-check-productioncode,style-check-tests,style-check-command-line,style-check-flask-app
