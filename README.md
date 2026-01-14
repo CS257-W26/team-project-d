@@ -2,4 +2,4 @@
 # CS257-TeamTemplate
 Template for long-term team projects for CS257 Software Design
 
-Group D Team members: Milly, Simon, Amery
+Group D Team Members: Milly, Simon, Amery
