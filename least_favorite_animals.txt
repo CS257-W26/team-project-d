@@ -1,3 +1,0 @@
-Huizi: cockroach
-Teammate1: snake
-Teammate2: spider
