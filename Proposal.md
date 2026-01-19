@@ -2,17 +2,20 @@
 
 # Sustainable Development Goal(s): Goal 13: Climate action & Goal 15: Life on land
 
+* This project will facilitate the exploration and comparison of territorial CO₂ emissions and deforestation across countries and over time. By turning these datasets into searchable country pages, rankings, cross-dataset comparisons, users can identify trends, supporting education and more informed conversations about climate mitigation and forest conservation.
+* Hopefully this will also help people realize the harm of deforestation and take actions to contribute to the protection of trees, since CO2 concentration rise has a direct negative impact on human, and the Earth as a whole.
+
 # Features
 
 ## Feature 1: Description of the purpose of the website & Referable data to further look at if interested in the topic.
 
-* Person responsible:
+* Person responsible: Amery
 * User story: As a general person interested in sustainability related topics, I can read through the description and further data so that I know what this website wants to show us and have something more to look at if I find myself interested.
 * Acceptance Criteria: Highlighted respectively at the start and end of the website individually, normal font size; neutral tone
   
 ## Feature 2: a graphics World map that shows the correlation between deforestation and CO2 emission from 2000-2025
 
-* Person responsible:
+* Person responsible: Simon
 * User story: As a person interested in general deforestation and CO2 emissions, I can use the sliding bar to visualize the development or improvement through time of how strongly deforestation is impacting CO2 emissions.
 * Acceptance Criteria: Shows different level of severness of countries through color shading and a sliding bar that compares 2 different eras
 
