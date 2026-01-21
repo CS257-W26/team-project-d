@@ -45,12 +45,12 @@ Thursday - Amery
 # Communication
 * WhatsApp for quick messages and updates
 * Check-in at least twice every week, and at least once the day before assignments are due
-* Dealing w/ not communicating: Shall talk with each other after class / during weekly meeting sessions and see if something is wrong， if communication is still not going on well，ask Anya for advice.
+* Dealing w/ not communicating: Shall talk with each other after class / during weekly meeting sessions and see if something is wrong, if communication is still not going on well，ask Anya for advice.
 * Email for anything formal or longer (e.g., scheduling, documentation)
-* Time commitment： apart from the meeting, at least 4 hours/week.
+* Time commitment: apart from the meeting, at least 4 hours/week.
 
 # Conflict resolution
 * Bring issues up early and discuss respectfully as a team. 
-* Communicate through texting first，and see if it can be communicated through discussions and perhaps office hours
-* If team member does not show up， email them or talk after class.
+* Communicate through texting first, and see if it can be communicated through discussions and perhaps office hours
+* If team member does not show up, email them or talk after class.
 * If we can’t resolve it, we’ll ask the instructor Anya for help.
