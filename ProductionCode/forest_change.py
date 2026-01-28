@@ -1,6 +1,8 @@
 """
 Queries for the annual change in forest area dataset.
-Load annual change in forest area dataset and provides helper functions to look up values, compute rankings, and find default years.
+
+Load annual change in forest area dataset and provides 
+helper functions to look up values, compute rankings, and find default years.
 """
 
 from __future__ import annotations

@@ -19,4 +19,3 @@ def read_csv_records(csv_path: Path) -> List[Dict[str, str]]:
         if reader.fieldnames is None:
             raise ValueError(f"CSV file has no header row: {csv_path}")
         return list(reader)
-

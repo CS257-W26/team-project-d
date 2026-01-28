@@ -1,6 +1,8 @@
 """
 Queries for the CO₂ emissions per capita dataset.
-Load the CO₂ emissions dataset and provides helper functions to look up values and list the top emitters.
+
+Load the CO₂ emissions dataset and provides 
+helper functions to look up values and list the top emitters.
 """
 
 from __future__ import annotations

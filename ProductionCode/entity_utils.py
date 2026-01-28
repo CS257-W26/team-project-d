@@ -44,4 +44,3 @@ def match_entity_name(query: str, entities: Iterable[str]) -> str:
         raise ValueError(f"Unknown entity name. Did you mean one of: {suggestion_text}")
 
     raise ValueError("Unknown entity name.")
-

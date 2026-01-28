@@ -25,4 +25,3 @@ def format_number(value: float, decimals: int = 2) -> str:
     if abs(value - round(value)) < 1e-9:
         return f"{int(round(value)):,}"
     return f"{value:,.{decimals}f}"
-

@@ -374,4 +374,3 @@ class TestCommandLineAcceptance(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(out, "")
         self.assertIn("CSV file not found", err)
-    

@@ -19,4 +19,3 @@ def load_country_entities(data_dir: Path) -> Set[str]:
         if is_country_row(row):
             countries.add(row.entity)
     return countries
-

@@ -1,6 +1,7 @@
 '''
 The eventual location for the command line interface (CLI) for the project.
 This will be the entry point for the project when run from the command line.
+
 Command-line interface for querying the project datasets.
 '''
 
@@ -29,6 +30,7 @@ from ProductionCode.forest_change import (
     value_for_entity_year as forest_value_for_entity_year,
 )
 from ProductionCode.output_format import (
+    RankContext,
     RankResult,
     format_rank_result,
     format_single_value,
@@ -193,15 +195,14 @@ def run_ranking(args: argparse.Namespace) -> str:
             only_countries=only_countries,
         )
         total = count_entities_for_year(rows, year=year, only_countries=only_countries)
+        context = RankContext(metric=FOREST_CHANGE_COLUMN, unit="ha", order=args.order)
         result = RankResult(
             entity=entity,
             year=year,
-            metric=FOREST_CHANGE_COLUMN,
-            order=args.order,
+            context=context,
             rank=rank,
             total=total,
             value=value,
-            unit="ha",
         )
         return format_rank_result(result)
 
@@ -228,7 +229,7 @@ def run_co2(args: argparse.Namespace) -> str:
     data_dir = _data_dir(args)
     rows = load_co2_rows(data_dir)
 
-    """use the forest dataset to determine which entities count as countries"""
+    # use the forest dataset to determine which entities count as countries
     country_entities = load_country_entities(data_dir)
     only_countries = not args.include_aggregates
 
