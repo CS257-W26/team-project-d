@@ -1,4 +1,6 @@
-# Utility functions for reading data files
+"""
+File I/O helper functions for reading CSV datasets.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +8,9 @@ import csv
 from pathlib import Path
 from typing import Dict, List
 
-# read a csv file into a list of dict records
+
 def read_csv_records(csv_path: Path) -> List[Dict[str, str]]:
+    """read a CSV file into a list of dict records"""
     if not csv_path.exists():
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
@@ -16,3 +19,4 @@ def read_csv_records(csv_path: Path) -> List[Dict[str, str]]:
         if reader.fieldnames is None:
             raise ValueError(f"CSV file has no header row: {csv_path}")
         return list(reader)
+

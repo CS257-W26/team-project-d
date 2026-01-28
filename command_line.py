@@ -1,6 +1,7 @@
 '''
 The eventual location for the command line interface (CLI) for the project.
 This will be the entry point for the project when run from the command line.
+Command-line interface for querying the project datasets.
 '''
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from typing import List, Optional
 
 from ProductionCode.co2 import (
     CO2_COLUMN,
+    latest_year as co2_latest_year,
     load_co2_rows,
     top_emitters,
     value_for_entity_year as co2_value_for_entity_year,
@@ -19,13 +21,15 @@ from ProductionCode.co2 import (
 from ProductionCode.country_list import load_country_entities
 from ProductionCode.forest_change import (
     FOREST_CHANGE_COLUMN,
-    load_forest_change_rows,
+    count_entities_for_year,
     latest_year as forest_latest_year,
+    load_forest_change_rows,
     rank_entities as forest_rank_entities,
     rank_for_entity as forest_rank_for_entity,
     value_for_entity_year as forest_value_for_entity_year,
 )
 from ProductionCode.output_format import (
+    RankResult,
     format_rank_result,
     format_single_value,
     format_top_list,
@@ -33,8 +37,9 @@ from ProductionCode.output_format import (
 
 DEFAULT_TOP_N = 10
 
-# build the argparse CLI parser, will return a configured ArgumentParser
+
 def build_parser() -> argparse.ArgumentParser:
+    """build and return the CLI argument parser"""
     description = (
         "Query environmental datasets (forest change and CO₂ per capita) "
         "from the command line."
@@ -105,29 +110,40 @@ def build_parser() -> argparse.ArgumentParser:
         "--order",
         choices=["loss", "gain"],
         default="loss",
-        help="Ranking order for forest change: 'loss' (most negative first) or 'gain' (most positive first). ",
+        help=(
+            "Ranking order for forest change: 'loss' (most negative first) "
+            "or 'gain' (most positive first)."
+        ),
     )
     parser.add_argument(
         "--include-aggregates",
         action="store_true",
-        help="Include aggregates/regions (e.g., World, Africa) instead of only countries.",
+        help=(
+            "Include aggregates/regions (e.g., World, Africa) "
+            "instead of only countries."
+        ),
     )
+    default_data_dir = str(Path(__file__).resolve().parent / "Data")
     parser.add_argument(
         "--data-dir",
-        default=str(Path(__file__).resolve().parent / "Data"),
-        help="Path to the directory containing CSV files (default: ./Data). ",
+        default=default_data_dir,
+        help="Path to the directory containing CSV files (default: ./Data).",
     )
 
     return parser
 
-# run the --deforestation feature
-def run_deforestation(args: argparse.Namespace) -> str:
-    data_dir = Path(args.data_dir)
-    rows = load_forest_change_rows(data_dir)
 
+def _data_dir(args: argparse.Namespace) -> Path:
+    """return the data directory from parsed CLI args"""
+    return Path(args.data_dir)
+
+
+def run_deforestation(args: argparse.Namespace) -> str:
+    """implement the --deforestation feature"""
+    data_dir = _data_dir(args)
+    rows = load_forest_change_rows(data_dir)
     only_countries = not args.include_aggregates
 
-    # if user provided a country name, show a single value.
     if args.deforestation:
         entity, year, value = forest_value_for_entity_year(
             rows=rows,
@@ -143,8 +159,10 @@ def run_deforestation(args: argparse.Namespace) -> str:
             unit="ha",
         )
 
-    # otherwise list a ranking
-    year = args.year if args.year is not None else forest_latest_year(rows, only_countries=only_countries)
+    year = args.year
+    if year is None:
+        year = forest_latest_year(rows, only_countries=only_countries)
+
     ranked = forest_rank_entities(
         rows=rows,
         year=year,
@@ -154,15 +172,16 @@ def run_deforestation(args: argparse.Namespace) -> str:
     )
     title = (
         f"Top {min(args.top, len(ranked))} entities for {FOREST_CHANGE_COLUMN} in {year} "
-        f"(order={args.order}, {'countries only' if only_countries else 'including aggregates'}):"
+        f"(order={args.order}, "
+        f"{'countries only' if only_countries else 'including aggregates'}):"
     )
     return format_top_list(title=title, rows=ranked, unit="ha")
 
-# run the --ranking feature.
-def run_ranking(args: argparse.Namespace) -> str:
-    data_dir = Path(args.data_dir)
-    rows = load_forest_change_rows(data_dir)
 
+def run_ranking(args: argparse.Namespace) -> str:
+    """implement the --ranking feature"""
+    data_dir = _data_dir(args)
+    rows = load_forest_change_rows(data_dir)
     only_countries = not args.include_aggregates
 
     if args.ranking:
@@ -173,29 +192,23 @@ def run_ranking(args: argparse.Namespace) -> str:
             order=args.order,
             only_countries=only_countries,
         )
-
-        # total depends on year and filters
-        year_rows = forest_rank_entities(
-            rows=rows,
-            year=year,
-            order=args.order,
-            # just a big number to get all (no specific meaning)
-            top_n=10**9,  
-            only_countries=only_countries,
-        )
-        total = len(year_rows)
-        return format_rank_result(
+        total = count_entities_for_year(rows, year=year, only_countries=only_countries)
+        result = RankResult(
             entity=entity,
             year=year,
+            metric=FOREST_CHANGE_COLUMN,
+            order=args.order,
             rank=rank,
             total=total,
-            metric=FOREST_CHANGE_COLUMN,
             value=value,
             unit="ha",
-            order=args.order,
         )
+        return format_rank_result(result)
 
-    year = args.year if args.year is not None else forest_latest_year(rows, only_countries=only_countries)
+    year = args.year
+    if year is None:
+        year = forest_latest_year(rows, only_countries=only_countries)
+
     ranked = forest_rank_entities(
         rows=rows,
         year=year,
@@ -204,17 +217,18 @@ def run_ranking(args: argparse.Namespace) -> str:
         only_countries=only_countries,
     )
     title = (
-        f"Forest change ranking for {year} "
-        f"(order={args.order}, {'countries only' if only_countries else 'including aggregates'}):"
+        f"Forest change ranking for {year} (order={args.order}, "
+        f"{'countries only' if only_countries else 'including aggregates'}):"
     )
     return format_top_list(title=title, rows=ranked, unit="ha")
 
-# run the --co2 feature
+
 def run_co2(args: argparse.Namespace) -> str:
-    data_dir = Path(args.data_dir)
+    """implement the --co2 feature"""
+    data_dir = _data_dir(args)
     rows = load_co2_rows(data_dir)
 
-    # use the forest dataset to determine which entities count as countries
+    """use the forest dataset to determine which entities count as countries"""
     country_entities = load_country_entities(data_dir)
     only_countries = not args.include_aggregates
 
@@ -234,7 +248,14 @@ def run_co2(args: argparse.Namespace) -> str:
             unit="t/person",
         )
 
-    year = args.year if args.year is not None else max(r.year for r in rows)
+    year = args.year
+    if year is None:
+        year = co2_latest_year(
+            rows,
+            only_countries=only_countries,
+            country_entities=country_entities,
+        )
+
     top_rows = top_emitters(
         rows=rows,
         year=year,
@@ -248,8 +269,9 @@ def run_co2(args: argparse.Namespace) -> str:
     )
     return format_top_list(title=title, rows=top_rows, unit="t/person")
 
-# entry point for the CLI
+
 def main(argv: Optional[List[str]] = None) -> int:
+    """run the CLI and return a process exit code"""
     parser = build_parser()
     args = parser.parse_args(argv)
 
