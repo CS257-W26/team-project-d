@@ -6,20 +6,20 @@ Group D Team Members: Milly, Simon, Amery
 
 # Team Project D – Command Line Interface (Component 1)
 
-This repo contains a **Python command-line app** that lets you query and explore our
+This repo contains a Python command-line app that lets you query and explore our
 environmental datasets (Our World in Data CSV exports).
 
 Supported features (3 independent CLI features):
 
-1. **Deforestation / forest change lookup** (`--deforestation`)  
+1. Deforestation / forest change lookup (`--deforestation`)  
    Look up the *annual change in forest area* for a country in a specific year.
-   If `--year` is omitted, the app defaults to the **latest year available for that country**.
+   If `--year` is omitted, the app defaults to the latest year available for that country.
 
-2. **CO₂ per-capita lookup** (`--co2`)  
+2. CO₂ per-capita lookup (`--co2`)  
    Look up *annual CO₂ emissions per capita* for a country in a specific year.
-   If `--year` is omitted, the app defaults to the **latest year available for that country**.
+   If `--year` is omitted, the app defaults to the latest year available for that country.
 
-3. **Forest change ranking** (`--ranking`)  
+3. Forest change ranking (`--ranking`)  
    Rank countries by annual change in forest area (largest loss or largest gain).
 
 The CLI includes `-h/--help` usage and an automated `unittest` test suite.
@@ -100,7 +100,7 @@ The CLI expects these files to exist in the data directory (default `./Data`):
 
 ## Dependencies
 
-This project uses **only the Python standard library**.
+This project uses only the Python standard library.
 
 ### Production code
 
@@ -119,4 +119,3 @@ This project uses **only the Python standard library**.
 - `tempfile` – create temporary CSV files for I/O edge-case tests
 
 No third-party packages are required.
->>>>>>> e8e476f (CLI)
