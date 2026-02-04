@@ -49,3 +49,25 @@ largest losses or gains.
 Acceptance tests:
 - `TestCommandLineAcceptance.test_cli_ranking_for_country`
 - `TestCommandLineAcceptance.test_cli_list_outputs` (lists top entries when no country is provided)
+
+
+# User Stories (Flask Component)
+
+The Flask app (`flask_app.py`) supports the same user stories as the CLI.
+
+## User Story 1 (Web): Forest change value + list
+
+- Single value: `/deforestation/<entity>?year=YYYY`
+- List output: `/deforestation?year=YYYY&top=N&order=loss|gain`
+
+## User Story 2 (Web): CO₂ per-capita value + list
+
+- Single value: `/co2/<entity>?year=YYYY`
+- List output: `/co2?year=YYYY&top=N`
+
+## User Story 3 (Web): Forest change ranking
+
+- Single entity rank: `/ranking/<entity>?year=YYYY&order=loss|gain`
+- List output: `/ranking?year=YYYY&top=N&order=loss|gain`
+
+Use `include_aggregates=1` to include aggregates like `World`.

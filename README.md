@@ -119,3 +119,47 @@ This project uses only the Python standard library.
 - `tempfile` – create temporary CSV files for I/O edge-case tests
 
 No third-party packages are required.
+
+
+# Flask App (Component 2)
+
+This repo also includes a Flask web app in `flask_app.py`.
+
+## Run the Flask app
+
+From the repo root:
+
+```bash
+# activate your virtual environment
+# source ~/.venvs/cs257_venv/bin/activate
+
+python3 flask_app.py
+```
+
+Then open the URL shown in the terminal (usually `http://127.0.0.1:5000/`).
+
+The homepage (`/`) includes instructions and working example links.
+
+### Routes (HTML)
+
+- `/deforestation/<entity>` – single forest-change value
+- `/deforestation` – top list (query params: `year`, `top`, `order`)
+- `/co2/<entity>` – single CO₂ per-capita value
+- `/co2` – top emitters list (query params: `year`, `top`)
+- `/ranking/<entity>` – rank for one entity (query params: `year`, `order`)
+- `/ranking` – top list (query params: `year`, `top`, `order`)
+
+Use `include_aggregates=1` to include aggregate entities like `World`.
+
+### API (JSON)
+
+All API endpoints are available under the `/api` prefix, for example:
+
+- `/api/deforestation/United_States?year=2021`
+- `/api/co2?year=2021&top=3`
+
+## Run tests
+
+```bash
+python3 -m unittest discover -s Tests
+```
