@@ -3,7 +3,7 @@ import sys
 
 from ProductionCode.datasource import DataSource
 
-def process(args: list, ds: DataSource) -> list:
+def process(args: list, ds: DataSource):
     """
     Process user input.
     Parameters:
@@ -14,13 +14,16 @@ def process(args: list, ds: DataSource) -> list:
         return help(ds)
     func = {"forest-change": ds.query_forest, "co2": ds.query_co2, "temps": ds.query_temps}
     try:
-        return func[args[0]](args[1:])
+        val = func[args[0].strip()](args[1:])
+        return val
     except KeyError:
         print("CLI: Invalid data parameter. -h for help.")
     except IndexError:
         print("CLI: Insufficient parameters. -h for help.")
     except ValueError as e:
         print(f"CLI: {e} -h for help.")
+    except Exception:
+        print("Process.")
 
 def help(ds: DataSource):
     """
@@ -35,8 +38,8 @@ def help(ds: DataSource):
     op5 = ["data order year N", ds.query_order_N]
     ops = {"search": op1, "range": op2, "list": op3, "aggregate": op4, "gain": op5}
     while True:
-        args = input("CLI: Options are 'func', 'data', 'quit'.")
-        if args == "quit": 
+        args = input("CLI: Options are 'func', 'data', 'q'.")
+        if args == "q": 
             break
         elif args == "func":
             func = input("CLI: Options are 'search', 'range', 'list', 'aggregate', 'gain'.")
@@ -50,34 +53,51 @@ def help(ds: DataSource):
         else:
             print("CLI: Invalid input.")
 
-def translate(vals: list):
+def translate(args, vals):
     """
     Print values.
     Parameters:
+        args (list): user input
         vals (list): list of dicts
     """
-    if len(vals) == 1:
-        val = list(vals[0].values())[2]
-        key = list(vals[0].keys())[2]
-        print(key, val)
-    elif len(vals) == 2:
+    if args[0] == "range":
         key = list(vals[0].keys())[2]
         val_1 = list(vals[0].values())[2]
         val_2 = list(vals[1].values())[2]
+        print("second if")
         print(key, val_1, val_2)
+    elif args[0] == "list":
+        for i in range(len(vals)):
+            print(vals[i]["entity"])
+    elif args[0] in ["top-gain", "top-emitters", "lowest-emitters", "lowest-gain"]:
+        keys = list(vals[0].keys())
+        fir, sec = keys[0], keys[2]
+        for i in range(len(vals)):
+            print(vals[i][fir] + ":", vals[i][sec])
+    elif args[0] == "aggregate":
+        keys = list(vals[0].keys())
+        fir, sec = keys[0], keys[2]
+        for i in range(len(vals)):
+            print(vals[i][fir] + ":", vals[i][sec])
     else:
-        print("Something went wrong.")
+        val = list(vals[0].values())[2]
+        key = list(vals[0].keys())[2]
+        print("first if")
+        print(key + ":", val)
 
 def main():
     ds = DataSource()
-    process(sys.argv[1:], ds)
+    vals = process(sys.argv[1:], ds)
+    if vals is not None:
+        translate(sys.argv[2:], vals)
     while True:
-        args = input("CLI ('quit' to exit): ").split()
-        if args[0] == "quit":
+        args = input("CLI ('q' to exit): ").split()
+        if args[0] == "q":
             break
         elif args:
-            vals = process(args)
-            translate(vals)
+            vals = process(args, ds)
+            if vals is not None:
+                translate(args[1:], vals)
         else:
             print("Invalid input.")
 

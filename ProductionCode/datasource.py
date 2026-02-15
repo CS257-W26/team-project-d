@@ -20,7 +20,7 @@ class DataSource:
         Parameters:
             args (list): user input
         """
-        return self.query_call("co2", "Annual_CO2_Capita_Emissions", args)
+        return self.query_call("co2", "co2_per_capita", args)
 
     def query_temps(self, args) -> list:
         """
@@ -61,10 +61,10 @@ class DataSource:
         if len(args) != 2:
             raise ValueError("Invalid argument.")
         vals = self.db.query(f"SELECT Entity, Year, {data} FROM {type}").all(as_dict=True)
-        if any(r["Entity"] == args[0] for r in vals):
-            if not any(r["Entity"] == args[0] and r["Year"] == args[1] for r in vals):
+        if any(r["entity"] == args[0] for r in vals):
+            if not any(r["entity"] == args[0] and r["year"] == int(args[1]) for r in vals):
                 raise ValueError(f"Year {args[1]} does not exist for {args[0]}.")
-            return [r for r in vals if r["Entity"] == args[0] and r["Year"] == args[1]]
+            return [r for r in vals if r["entity"] == args[0] and r["year"] == int(args[1])]
         raise ValueError(f"Entity {args[0]} does not exist in dataset.")
         
     def query_order_N(self, type: str, data: str, args: list) -> list:
@@ -75,17 +75,17 @@ class DataSource:
             data (str): columns to filter
             args (list): user input
         """
-        if len(args) < 3:
+        if len(args) != 3:
             raise ValueError("Invalid argument.")
         years = self.db.query(f"SELECT Year FROM {type}").all(as_dict=True)
-        if not any(r["Year"] == args[1] for r in years):
+        if not any(r["year"] == int(args[1]) for r in years):
             raise ValueError(f"Year {args[1]} does not exist in dataset.")
         order = "DESC" if str(args[0]).startswith("top") else "ASC"
         entry = f""" 
         SELECT Entity, Year, {data} 
         FROM {type} 
         WHERE Year = :year 
-        ORDER BY {data} {order[args[0]]} 
+        ORDER BY {data} {order} 
         LIMIT :n """
         vals = self.db.query(entry, year=args[1], n=args[2]).all(as_dict=True)
         return vals
@@ -112,9 +112,9 @@ class DataSource:
         """
         if len(args) != 1:
             raise ValueError("Invalid argument.")
-        vals = self.db.query(f"SELECT Entity, Year, FROM {type}").all(as_dict=True)
-        if any(r["Year"] == args[0] for r in vals):
-            return [r for r in vals if r["Year"] == args[0]]
+        vals = self.db.query(f"SELECT Entity, Year FROM {type}").all(as_dict=True)
+        if any(r["year"] == int(args[0]) for r in vals):
+            return [r for r in vals if r["year"] == int(args[0])]
         raise ValueError(f"Year {args[0]} does not exist in dataset.")
     
     def query_aggregator(self, type: str, data: str, args: list) -> list:
@@ -128,11 +128,11 @@ class DataSource:
         if len(args) < 2:
             raise ValueError("Invalid argument.")
         vals = self.db.query(f"SELECT Entity, Year, {data} FROM {type}").all(as_dict=True)
-        if any(r["Year"] == args[-1] for r in vals):
+        if any(r["year"] == int(args[-1]) for r in vals):
             for i in args[0:-1]:
-                if not any(r["Entity"] == i for r in vals):
+                if not any(r["entity"] == i for r in vals):
                     raise ValueError(f"Entity {i} does not exist in dataset.")
-                if not any(r["Entity"] == i and r["Year"] == args[-1] for r in vals):
+                if not any(r["entity"] == i and r["year"] == int(args[-1]) for r in vals):
                     raise ValueError(f"Entity {i} does not exist for {args[-1]}.")
-            return [r for r in vals if r["Year"] == args[-1] and r["Entity"] in args[:-1]]
+            return [r for r in vals if r["year"] == int(args[-1]) and r["entity"] in args[:-1]]
         raise ValueError(f"Year {args[-1]} does not exist in dataset.")

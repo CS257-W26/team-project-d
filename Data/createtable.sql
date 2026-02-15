@@ -6,8 +6,8 @@ CREATE TABLE deforestation_share_forest (
     deforestation DOUBLE PRECISION
 );
 
-DROP TABLE IF EXISTS co2_emission_per_capita;
-CREATE TABLE co2_emission_per_capita (
+DROP TABLE IF EXISTS co2;
+CREATE TABLE co2 (
     entity TEXT,
     year INTEGER,
     co2_per_capita DOUBLE PRECISION
