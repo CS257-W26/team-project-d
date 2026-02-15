@@ -1,4 +1,4 @@
-Entity,Code,Year,Global average temperature anomaly relative to 1861-1890,Lower bound of the annual temperature anomaly (95% confidence interval),Upper bound of the annual temperature anomaly (95% confidence interval)
+Entity,Code,Year,Relative_To_1861_1890,Lower_Bound,Upper_Bound
 Northern Hemisphere,OWID_NH,1850,-0.055067,-0.25498226,0.14484823
 Northern Hemisphere,OWID_NH,1851,0.1615803,-0.047568765,0.37072936
 Northern Hemisphere,OWID_NH,1852,0.14512725,-0.076859556,0.36711407
