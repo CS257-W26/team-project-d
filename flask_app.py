@@ -19,15 +19,21 @@ def entity(data: str, name: str, year_1: int, year_2: int = None):
     try:
         if year_2 is not None:
             vals = func[data](["range", name, year_1, year_2])
-            val_1 = list(vals[0].values())[2]
-            val_2 = list(vals[1].values())[2]
-            return render("regions.html", year_1 = year_1, year_2 = year_2, 
-            data = csv[data], val_1 = val_1, val_2 = val_2, name = name)
+            if vals is not None:
+                val_1 = list(vals[0].values())[2]
+                val_2 = list(vals[1].values())[2]
+                return render("regions.html", year_1 = year_1, year_2 = year_2, 
+                data = csv[data], val_1 = val_1, val_2 = val_2, name = name)
+            else:
+                return "Information does not exist for input."
         else:
             vals = func[data]([name, year_1])[0]
-            val_1 = list(vals.values())[2]
-            return render("regions.html", year_1 = year_1, year_2 = None,
-            data = csv[data], val_1 = val_1, val_2 = None, name = name)
+            if vals is not None:
+                val_1 = list(vals.values())[2]
+                return render("regions.html", year_1 = year_1, year_2 = None,
+                data = csv[data], val_1 = val_1, val_2 = None, name = name)
+            else:
+                return "Information does not exist for input."
     except KeyError:
         return "Invalid data parameter. Please check homepage for help."
     except ValueError as e:
