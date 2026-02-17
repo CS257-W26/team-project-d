@@ -3,6 +3,7 @@ import records
 import ProductionCode.psql_config as config
 
 class DataSource:
+    """DataSource class for database queries"""
     def __init__(self):
         connect = f"postgresql://{config.user}:{config.password}@localhost:5432/{config.database}"
         self.db = records.Database(connect)
@@ -47,6 +48,7 @@ class DataSource:
         if args[0] == "list":
             return self.query_list(table, args[1:])
         if args[0] == "aggregate":
+            print("here")
             return self.query_aggregator(table, data, args[1:])
         return self.query_regions(table, data, args)
 
@@ -82,11 +84,10 @@ class DataSource:
         if not args[1].isdigit() or not args[2].isdigit():
             raise ValueError(f"{args[1]} or {args[2]} are not integers.")
         years = self.db.query(f"SELECT Year FROM {table}").all(as_dict=True)
-        if not any(r["year"] == int(args[2]) for r in years):
+        if not any(r["year"] == int(args[2]) for r in years): 
             raise ValueError(f"Year {args[2]} does not exist in dataset.")
         order = "DESC" if str(args[0]).startswith("top") else "ASC"
-        entry = f"""SELECT Entity, Year, {data} FROM {table}
-         WHERE Year = :year ORDER BY {data} {order} LIMIT :n"""
+        entry = f"""SELECT Entity, Year, {data} FROM {table} WHERE Year = :year ORDER BY {data} {order} LIMIT :n"""
         vals = self.db.query(entry, year=args[2], n=args[1]).all(as_dict=True)
         return vals
 

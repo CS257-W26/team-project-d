@@ -1,3 +1,4 @@
+"""For docstring functionality."""
 import inspect
 import sys
 
@@ -11,15 +12,17 @@ def process(args: list, ds: DataSource):
         ds (DataSource): query module
     """
     if args[0] == "-h":
-        return help(ds)
+        return helper(ds)
     func = {"forest-change": ds.query_forest, "co2": ds.query_co2, "temps": ds.query_temps}
     try:
         args = reader(args, func)
         return func[args[0].strip()](args[1:])
     except IndexError:
         print("CLI: Insufficient parameters. -h for help.")
-    except Exception as e:
+        return None
+    except (ValueError, KeyError) as e:
         print(f"CLI: {e} -h for help.")
+        return None
 
 def reader(args: list, func: dict):
     """
@@ -35,13 +38,13 @@ def reader(args: list, func: dict):
         i = 2 if args[1] == "range" else 1
         args[i] = args[i].replace('-', ' ')
         return args
-    if args[1] == "aggregate": 
-        for i in range(2, len(args) - 1): 
-            args[i] = args[i].replace('-', ' ') 
+    if args[1] == "aggregate":
+        for i in range(2, len(args) - 1):
+            args[i] = args[i].replace('-', ' ')
         return args
     return args
 
-def help(ds: DataSource):
+def helper(ds: DataSource):
     """
     Process help requests.
     Parameters:
@@ -55,12 +58,12 @@ def help(ds: DataSource):
     ops = {"search": op1, "range": op2, "list": op3, "aggregate": op4, "chart": op5}
     while True:
         args = input("CLI ('func', 'data', 'q'): ")
-        if args == "q": 
+        if args == "q":
             break
-        elif args == "func":
+        if args == "func":
             func = input("CLI ('search', 'range', 'list', 'aggregate', 'chart'): ")
             try:
-                print(inspect.getdoc(ops[func][1]).split("\n")[0])
+                print(inspect.getdoc(ops[func][1]).split("\n", maxsplit=1)[0])
                 print(f"format: {ops[func][0]}")
             except KeyError:
                 print("CLI: Invalid key search.")
@@ -90,10 +93,11 @@ def translate(args: list, vals: list):
         print(f"{list(vals[0].keys())[2]}: {list(vals[0].values())[2]}")
 
 def main():
+    """Handle user arguments."""
     ds = DataSource()
     try:
         vals = process(sys.argv[1:], ds)
-        if vals is not None:
+        if isinstance(vals, list):
             translate(sys.argv[2:], vals)
     except IndexError:
         print("CLI: No user input. -h for help.")
@@ -102,9 +106,9 @@ def main():
             args = input("CLI ('q' or 'exit' to exit): ").split()
             if args[0] in {"q", "exit"}:
                 break
-            elif args:
+            if args:
                 vals = process(args, ds)
-                if vals is not None:
+                if isinstance(vals, list):
                     translate(args[1:], vals)
             else:
                 print("Invalid input.")
