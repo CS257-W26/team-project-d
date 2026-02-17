@@ -20,14 +20,12 @@ _COUNTRIES_TABLE = "countries"
 @dataclass(frozen=True)
 class RankRow:
     """a single (entity, value) row in a ranked list"""
-
     entity: str
     value: float
 
 
 class ClimateRepository:
     """repository that queries the climate datasets from a SQL database"""
-
     def __init__(self, db: Any):
         """create the repository"""
         self._db = db
@@ -199,7 +197,6 @@ class ClimateRepository:
             else self.forest_latest_year_for_entity(entity_name, only_countries=only_countries)
         )
 
-        """first get the entity's value"""
         _, _, value = self.forest_value_for_entity_year(
             entity_query=entity_name,
             year=year_used,

@@ -350,7 +350,7 @@ def co2_route(entity: Optional[str] = None) -> str:
 
 @pages.route("/ranking")
 @pages.route("/ranking/<string:entity>")
-def ranking(entity: Optional[str] = None) -> str:
+def ranking(entity: Optional[str] = None) -> str:  # pylint: disable=too-many-locals
     """forest change ranking feature (entity rank or top list)"""
     try:
         year = parse_optional_int(request.args.get("year"), "year")

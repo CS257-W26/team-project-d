@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+import importlib
 from typing import Any, Optional
 
 
@@ -35,14 +36,15 @@ def _first_attr(config: Any, names: list[str]) -> Optional[str]:
 def _load_psql_config() -> DbConfig:
     """load database credentials"""
     try:
-        from ProductionCode import psql_config
-    except ImportError as exc:
+        psql_config = importlib.import_module("ProductionCode.psql_config")
+    except ModuleNotFoundError as exc:
         raise RuntimeError(
             "Missing ProductionCode/psql_config.py. "
             "Create it with your Postgres credentials, or set DATABASE_URL."
         ) from exc
 
     database = _first_attr(psql_config, [
+        "DATABASE",
         "database",
         "dbname",
         "db",
@@ -120,13 +122,13 @@ def get_db():
     db_url = get_db_url()
 
     try:
-        import records  # type: ignore
-    except ImportError as exc:
+        records = importlib.import_module("records")
+    except ModuleNotFoundError as exc:
         raise RuntimeError(
             "The 'records' package is required. Install it with: pip install records"
         ) from exc
 
     try:
         return records.Database(db_url)
-    except Exception as exc:  # pylint: disable=broad-exception-caught
+    except Exception as exc:
         raise RuntimeError(f"Failed to connect to database: {exc}") from exc

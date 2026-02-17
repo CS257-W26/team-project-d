@@ -4,16 +4,10 @@ Unit tests for command-line interface.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 import contextlib
 import io
 import unittest
 from unittest.mock import MagicMock, patch
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 import command_line
 
