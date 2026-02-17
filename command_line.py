@@ -32,24 +32,24 @@ def help(ds: DataSource):
         ds (DataSource): query module
     """
     op1 = ["data entity year", ds.query_regions]
-    op2 = ["data country year-1 year-2", ds.query_range]
+    op2 = ["data entity year-1 year-2", ds.query_range]
     op3 = ["data year", ds.query_list]
     op4 = ["data entity-1 entity-2 .. year", ds.query_aggregator]
-    op5 = ["data order year N", ds.query_order_N]
+    op5 = ["data order year N, order: top, bottom", ds.query_order_N]
     ops = {"search": op1, "range": op2, "list": op3, "aggregate": op4, "gain": op5}
     while True:
-        args = input("CLI: Options are 'func', 'data', 'q'.")
+        args = input("CLI ('func', 'data', 'q'): ")
         if args == "q": 
             break
         elif args == "func":
-            func = input("CLI: Options are 'search', 'range', 'list', 'aggregate', 'gain'.")
+            func = input("CLI ('search', 'range', 'list', 'aggregate', 'gain'): ")
             try:
                 print(inspect.getdoc(ops[func][1]).split("\n")[0])
                 print(f"format: {ops[func][0]}")
             except KeyError:
                 print("CLI: Invalid key search.")
         elif args == "data":
-            print("CLI: Options are 'forest_change', 'co2', 'temps'.")
+            print("'forest_change', 'co2', 'temps'")
         else:
             print("CLI: Invalid input.")
 
@@ -69,7 +69,7 @@ def translate(args, vals):
     elif args[0] == "list":
         for i in range(len(vals)):
             print(vals[i]["entity"])
-    elif args[0] in ["top-gain", "top-emitters", "lowest-emitters", "lowest-gain"]:
+    elif args[0] in ["top", "bottom"]:
         keys = list(vals[0].keys())
         fir, sec = keys[0], keys[2]
         for i in range(len(vals)):
@@ -87,19 +87,25 @@ def translate(args, vals):
 
 def main():
     ds = DataSource()
-    vals = process(sys.argv[1:], ds)
-    if vals is not None:
-        translate(sys.argv[2:], vals)
+    try:
+        vals = process(sys.argv[1:], ds)
+        if vals is not None:
+            translate(sys.argv[2:], vals)
+    except IndexError:
+        print("CLI: No user input. -h for help.")
     while True:
-        args = input("CLI ('q' to exit): ").split()
-        if args[0] == "q":
-            break
-        elif args:
-            vals = process(args, ds)
-            if vals is not None:
-                translate(args[1:], vals)
-        else:
-            print("Invalid input.")
+        try:
+            args = input("CLI ('q' or 'exit' to exit): ").split()
+            if args[0] in {"q", "exit"}:
+                break
+            elif args:
+                vals = process(args, ds)
+                if vals is not None:
+                    translate(args[1:], vals)
+            else:
+                print("Invalid input.")
+        except IndexError:
+            print("CLI: No user input. -h for help.")
 
 if __name__ == "__main__":
     main()

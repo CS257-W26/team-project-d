@@ -39,7 +39,7 @@ class DataSource:
             data (str): columns to filter
             args (list): user input
         """
-        if args[0] in ["top-gain", "top-emitters", "lowest-emitters", "lowest-gain"]:
+        if args[0] in ["top", "bottom"]:
             return self.query_order_N(type, data, args)
         elif args[0] == "range":
             return self.query_range(type, data, args[1:])
