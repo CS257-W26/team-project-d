@@ -1,3 +1,4 @@
+"""For database access."""
 import records
 import ProductionCode.psql_config as config
 
@@ -41,14 +42,13 @@ class DataSource:
         """
         if args[0] in ["top", "bottom"]:
             return self.query_order_n(table, data, args)
-        elif args[0] == "range":
+        if args[0] == "range":
             return self.query_range(table, data, args[1:])
-        elif args[0] == "list":
+        if args[0] == "list":
             return self.query_list(table, args[1:])
-        elif args[0] == "aggregate":
+        if args[0] == "aggregate":
             return self.query_aggregator(table, data, args[1:])
-        else:
-            return self.query_regions(table, data, args)
+        return self.query_regions(table, data, args)
 
     def query_regions(self, table: str, data: str, args) -> list:
         """
@@ -85,7 +85,8 @@ class DataSource:
         if not any(r["year"] == int(args[2]) for r in years):
             raise ValueError(f"Year {args[2]} does not exist in dataset.")
         order = "DESC" if str(args[0]).startswith("top") else "ASC"
-        entry = f"""SELECT Entity, Year, {data} FROM {table} WHERE Year = :year ORDER BY {data} {order} LIMIT :n"""
+        entry = f"""SELECT Entity, Year, {data} FROM {table}
+         WHERE Year = :year ORDER BY {data} {order} LIMIT :n"""
         vals = self.db.query(entry, year=args[2], n=args[1]).all(as_dict=True)
         return vals
 
