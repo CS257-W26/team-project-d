@@ -51,7 +51,7 @@ def help(ds: DataSource):
     op2 = ["data entity year-1 year-2", ds.query_range]
     op3 = ["data year", ds.query_list]
     op4 = ["data entity-1 entity-2 .. year", ds.query_aggregator]
-    op5 = ["data order N year, order: top, bottom", ds.query_order_N]
+    op5 = ["data order N year, order: top, bottom", ds.query_order_n]
     ops = {"search": op1, "range": op2, "list": op3, "aggregate": op4, "chart": op5}
     while True:
         args = input("CLI ('func', 'data', 'q'): ")
