@@ -14,16 +14,32 @@ def process(args: list, ds: DataSource):
         return help(ds)
     func = {"forest-change": ds.query_forest, "co2": ds.query_co2, "temps": ds.query_temps}
     try:
-        val = func[args[0].strip()](args[1:])
-        return val
-    except KeyError:
-        print("CLI: Invalid data parameter. -h for help.")
+        args = reader(args, func)
+        return func[args[0].strip()](args[1:])
     except IndexError:
         print("CLI: Insufficient parameters. -h for help.")
-    except ValueError as e:
+    except Exception as e:
         print(f"CLI: {e} -h for help.")
-    except Exception:
-        print("Process.")
+
+def reader(args: list, func: dict):
+    """
+    Catch data misinput, parse entity names.
+    Parameters:
+        args (list): user input
+        func (dict): dictionary of functions
+        ds (DataSource): query module
+    """
+    if not args[0] in list(func.keys()):
+        raise KeyError("Invalid data parameter.")
+    if not args[1] in ["list", "top", "bottom", "aggregate"]:
+        i = 2 if args[1] == "range" else 1
+        args[i] = args[i].replace('-', ' ')
+        return args
+    if args[1] == "aggregate": 
+        for i in range(2, len(args) - 1): 
+            args[i] = args[i].replace('-', ' ') 
+        return args
+    return args
 
 def help(ds: DataSource):
     """
@@ -35,14 +51,14 @@ def help(ds: DataSource):
     op2 = ["data entity year-1 year-2", ds.query_range]
     op3 = ["data year", ds.query_list]
     op4 = ["data entity-1 entity-2 .. year", ds.query_aggregator]
-    op5 = ["data order year N, order: top, bottom", ds.query_order_N]
-    ops = {"search": op1, "range": op2, "list": op3, "aggregate": op4, "gain": op5}
+    op5 = ["data order N year, order: top, bottom", ds.query_order_N]
+    ops = {"search": op1, "range": op2, "list": op3, "aggregate": op4, "chart": op5}
     while True:
         args = input("CLI ('func', 'data', 'q'): ")
         if args == "q": 
             break
         elif args == "func":
-            func = input("CLI ('search', 'range', 'list', 'aggregate', 'gain'): ")
+            func = input("CLI ('search', 'range', 'list', 'aggregate', 'chart'): ")
             try:
                 print(inspect.getdoc(ops[func][1]).split("\n")[0])
                 print(f"format: {ops[func][0]}")
@@ -53,37 +69,25 @@ def help(ds: DataSource):
         else:
             print("CLI: Invalid input.")
 
-def translate(args, vals):
+def translate(args: list, vals: list):
     """
-    Print values.
+    Translate dict into values.
     Parameters:
         args (list): user input
         vals (list): list of dicts
     """
     if args[0] == "range":
         key = list(vals[0].keys())[2]
-        val_1 = list(vals[0].values())[2]
-        val_2 = list(vals[1].values())[2]
-        print("second if")
-        print(key, val_1, val_2)
+        print(key, *(f"{year}: {list(v.values())[2]}" for year, v in zip(args[2:], vals)), sep="\n")
     elif args[0] == "list":
-        for i in range(len(vals)):
-            print(vals[i]["entity"])
-    elif args[0] in ["top", "bottom"]:
+        print(*(v["entity"] for v in vals), sep="\n")
+    elif args[0] in ["top", "bottom", "aggregate"]:
         keys = list(vals[0].keys())
-        fir, sec = keys[0], keys[2]
-        for i in range(len(vals)):
-            print(vals[i][fir] + ":", vals[i][sec])
-    elif args[0] == "aggregate":
-        keys = list(vals[0].keys())
-        fir, sec = keys[0], keys[2]
-        for i in range(len(vals)):
-            print(vals[i][fir] + ":", vals[i][sec])
+        print(keys[2], *(f"{v[keys[0]]}: {v[keys[2]]}" for v in vals), sep="\n")
+        if args[0] == "aggregate":
+            print("Sum:", sum(v[keys[2]] for v in vals))
     else:
-        val = list(vals[0].values())[2]
-        key = list(vals[0].keys())[2]
-        print("first if")
-        print(key + ":", val)
+        print(f"{list(vals[0].keys())[2]}: {list(vals[0].values())[2]}")
 
 def main():
     ds = DataSource()

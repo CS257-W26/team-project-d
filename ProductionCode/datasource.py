@@ -60,6 +60,8 @@ class DataSource:
         """
         if len(args) != 2:
             raise ValueError("Invalid argument.")
+        if not args[1].isdigit():
+            raise ValueError(f"{args[1]} is an invalid year input.")
         vals = self.db.query(f"SELECT Entity, Year, {data} FROM {type}").all(as_dict=True)
         if any(r["entity"] == args[0] for r in vals):
             if not any(r["entity"] == args[0] and r["year"] == int(args[1]) for r in vals):
@@ -77,9 +79,11 @@ class DataSource:
         """
         if len(args) != 3:
             raise ValueError("Invalid argument.")
+        if not args[1].isdigit() or not args[2].isdigit():
+            raise ValueError(f"{args[1]} or {args[2]} are not integers.")
         years = self.db.query(f"SELECT Year FROM {type}").all(as_dict=True)
-        if not any(r["year"] == int(args[1]) for r in years):
-            raise ValueError(f"Year {args[1]} does not exist in dataset.")
+        if not any(r["year"] == int(args[2]) for r in years):
+            raise ValueError(f"Year {args[2]} does not exist in dataset.")
         order = "DESC" if str(args[0]).startswith("top") else "ASC"
         entry = f""" 
         SELECT Entity, Year, {data} 
@@ -87,7 +91,7 @@ class DataSource:
         WHERE Year = :year 
         ORDER BY {data} {order} 
         LIMIT :n """
-        vals = self.db.query(entry, year=args[1], n=args[2]).all(as_dict=True)
+        vals = self.db.query(entry, year=args[2], n=args[1]).all(as_dict=True)
         return vals
 
     def query_range(self, type: str, data: str, args: list) -> list:
@@ -112,6 +116,8 @@ class DataSource:
         """
         if len(args) != 1:
             raise ValueError("Invalid argument.")
+        if not args[0].isdigit():
+            raise ValueError(f"{args[0]} is an invalid year input.")
         vals = self.db.query(f"SELECT Entity, Year FROM {type}").all(as_dict=True)
         if any(r["year"] == int(args[0]) for r in vals):
             return [r for r in vals if r["year"] == int(args[0])]
@@ -127,6 +133,8 @@ class DataSource:
         """
         if len(args) < 2:
             raise ValueError("Invalid argument.")
+        if not args[-1].isdigit():
+            raise ValueError(f"{args[-1]} is an invalid year input.")
         vals = self.db.query(f"SELECT Entity, Year, {data} FROM {type}").all(as_dict=True)
         if any(r["year"] == int(args[-1]) for r in vals):
             for i in args[0:-1]:
