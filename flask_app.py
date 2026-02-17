@@ -30,8 +30,8 @@ def entity(data: str, name: str, year_1: int, year_2: int = None):
             vals = func[data]([name, year_1])[0]
             if vals is not None:
                 val_1 = list(vals.values())[2]
-                return render("regions.html", year_1 = year_1, year_2 = None,
-                data = csv[data], val_1 = val_1, val_2 = None, name = name)
+                return render("regions.html", year_1 = year_1, year_2 = "No 2nd year.",
+                data = csv[data], val_1 = val_1, val_2 = "No 2nd year.", name = name)
             else:
                 return "Information does not exist for input."
     except KeyError:
@@ -43,12 +43,19 @@ def entity(data: str, name: str, year_1: int, year_2: int = None):
 
 @app.route('/<data>/<int:year>')
 def entities(data: str, year: int):
+    # not working
     func = {"forest-change": ds.query_forest, "co2": ds.query_co2, "temps": ds.query_temps}
     try:
-        val = func[data](["list", year])[0]
-        vals = ", ".join(list(val.values()))
-        return render("list.html", vals = vals)
+        val = func[data](["list", year])
+        vals = []
+        for i in val:
+            vals.append(i["entity"])
+        values = ", ".join(vals)
+        return f"{vals}"
     except ValueError as e:
         return f"{e} Please check homepage for help."
     except Exception:
         return "Something went wrong."
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5209)
