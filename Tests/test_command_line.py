@@ -95,6 +95,28 @@ class TestCommandLine(unittest.TestCase):
 
     @patch("command_line.ClimateRepository")
     @patch("command_line.get_db")
+    def test_co2_list(self, mock_get_db, mock_repo_class) -> None:
+        """--co2 (no country) should call co2_top_emitters"""
+
+        mock_get_db.return_value = MagicMock()
+        repo = mock_repo_class.return_value
+        repo.co2_top_emitters.return_value = [("Qatar", 40.0), ("Canada", 14.25)]
+
+        code, out, err = self.run_cli(["--co2", "--year", "2021", "--top", "2"])
+
+        self.assertEqual(0, code)
+        self.assertEqual("", err)
+        self.assertIn("Top 2 entities", out)
+        self.assertIn("1. Qatar:", out)
+
+        repo.co2_top_emitters.assert_called_once_with(
+            year=2021,
+            top_n=2,
+            only_countries=True,
+        )
+
+    @patch("command_line.ClimateRepository")
+    @patch("command_line.get_db")
     def test_ranking_single_value(self, mock_get_db, mock_repo_class) -> None:
         """--ranking country should call forest_rank_for_entity + count"""
 
@@ -125,6 +147,29 @@ class TestCommandLine(unittest.TestCase):
         )
         repo.forest_count_entities_for_year.assert_called_once_with(
             year=2020,
+            only_countries=True,
+        )
+
+    @patch("command_line.ClimateRepository")
+    @patch("command_line.get_db")
+    def test_ranking_list(self, mock_get_db, mock_repo_class) -> None:
+        """--ranking (no country) should call forest_rank_entities"""
+
+        mock_get_db.return_value = MagicMock()
+        repo = mock_repo_class.return_value
+        repo.forest_rank_entities.return_value = [("Brazil", -10.0), ("Canada", 2.0)]
+
+        code, out, err = self.run_cli(["--ranking", "--year", "2021", "--top", "2"])
+
+        self.assertEqual(0, code)
+        self.assertEqual("", err)
+        self.assertIn("Forest change ranking for 2021", out)
+        self.assertIn("1. Brazil:", out)
+
+        repo.forest_rank_entities.assert_called_once_with(
+            year=2021,
+            order="loss",
+            top_n=2,
             only_countries=True,
         )
 

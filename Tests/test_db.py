@@ -14,10 +14,9 @@ from ProductionCode import db
 
 
 class TestDbConfig(unittest.TestCase):
-    """Tests for connection-string building and config parsing."""
-
+    """tests for connection-string building and config parsing"""
     def test_get_db_url_prefers_environment_variable(self) -> None:
-        """If DATABASE_URL is set, it should be returned verbatim."""
+        """if DATABASE_URL is set, it should be returned verbatim"""
         os.environ["DATABASE_URL"] = "postgresql://example"
         try:
             self.assertEqual("postgresql://example", db.get_db_url())
@@ -25,7 +24,7 @@ class TestDbConfig(unittest.TestCase):
             os.environ.pop("DATABASE_URL", None)
 
     def test_get_db_url_supports_multiple_variable_names(self) -> None:
-        """Config can use DATABASE/USER/PASSWORD/HOST/PORT variable names."""
+        """config can use variable names"""
         fake_cfg = types.ModuleType("ProductionCode.psql_config")
         fake_cfg.DATABASE = "team_db"
         fake_cfg.USER = "alice"
@@ -40,7 +39,7 @@ class TestDbConfig(unittest.TestCase):
             )
 
     def test_get_db_url_missing_values_raises(self) -> None:
-        """Missing required values in psql_config should raise a helpful error."""
+        """missing required values in psql_config should raise a helpful error"""
         fake_cfg = types.ModuleType("ProductionCode.psql_config")
         fake_cfg.DATABASE = "team_db"
         fake_cfg.USER = "alice"
@@ -53,7 +52,7 @@ class TestDbConfig(unittest.TestCase):
         self.assertIn("missing required values", str(ctx.exception).lower())
 
     def test_get_db_calls_records_database(self) -> None:
-        """get_db() should construct a records.Database instance with the URL."""
+        """get_db() should construct a records.Database instance with the url"""
         fake_records = types.SimpleNamespace(Database=MagicMock())
 
         with patch.dict(sys.modules, {"records": fake_records}):
