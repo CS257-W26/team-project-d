@@ -130,60 +130,6 @@ def _json_rows(rows: Sequence[Tuple[str, float]]) -> List[dict]:
     return [{"entity": entity, "value": value} for entity, value in rows]
 
 
-def _value_payload(
-    feature: str, metric: str, unit: str, entity: str, year: int, value: float
-) -> dict:
-    """build a consistent json payload for single-value endpoints"""
-    return {
-        "feature": feature,
-        "metric": metric,
-        "entity": entity,
-        "year": year,
-        "value": value,
-        "unit": unit,
-    }
-
-
-def _list_payload(
-    feature: str,
-    metric: str,
-    unit: str,
-    year: int,
-    rows: Sequence[Tuple[str, float]],
-    top_n: int,
-    order: Optional[str] = None,
-) -> dict:
-    """build a consistent json payload for top-list endpoints"""
-    payload = {
-        "feature": feature,
-        "metric": metric,
-        "year": year,
-        "top_n": min(top_n, len(rows)),
-        "unit": unit,
-        "rows": _json_rows(rows),
-    }
-    if order is not None:
-        payload["order"] = order
-    return payload
-
-
-def _ranking_payload(
-    entity: str, year: int, order: str, rank: int, total: int, value: float
-) -> dict:
-    """build a json payload for a single-entity ranking"""
-    return {
-        "feature": "ranking",
-        "metric": FOREST_CHANGE_COLUMN,
-        "entity": entity,
-        "year": year,
-        "order": order,
-        "rank": rank,
-        "total": total,
-        "value": value,
-        "unit": FOREST_UNIT,
-    }
-
-
 def _forest_value_data(entity: str) -> Tuple[str, int, float]:
     """return (entity, year, value) for forest-change"""
     return _repo().forest_value_for_entity_year(
@@ -300,7 +246,7 @@ def ranking(entity: Optional[str] = None):
             text = format_rank_result(RankResult(name, year, ctx, rank, total, value))
             return render_pre_page("Ranking", "Ranking", text)
 
-        year, order, top_n, rows = _forest_list_data()
+        year, order, _, rows = _forest_list_data()
         title = f"Forest change ranking for {year} (order={order})"
         text = format_top_list(title, rows, FOREST_UNIT)
         return render_pre_page("Ranking", f"Ranking {year}", text)
@@ -320,16 +266,25 @@ def api_deforestation(entity: Optional[str] = None):
     try:
         if entity:
             name, year, value = _forest_value_data(entity)
-            payload = _value_payload(
-                "deforestation", FOREST_CHANGE_COLUMN, FOREST_UNIT, name, year, value
-            )
-            return jsonify(payload)
+            return jsonify({
+                'feature': 'deforestation',
+                'metric': FOREST_CHANGE_COLUMN,
+                'entity': name,
+                'year': year,
+                'value': value,
+                'unit': FOREST_UNIT,
+            })
 
         year, order, top_n, rows = _forest_list_data()
-        payload = _list_payload(
-            "deforestation", FOREST_CHANGE_COLUMN, FOREST_UNIT, year, rows, top_n, order
-        )
-        return jsonify(payload)
+        return jsonify({
+            'feature': 'deforestation',
+            'metric': FOREST_CHANGE_COLUMN,
+            'year': year,
+            'order': order,
+            'top_n': min(top_n, len(rows)),
+            'unit': FOREST_UNIT,
+            'rows': _json_rows(rows),
+        })
     except ValueError as exc:
         return _api_error(exc)
 
@@ -341,11 +296,24 @@ def api_co2(entity: Optional[str] = None):
     try:
         if entity:
             name, year, value = _co2_value_data(entity)
-            return jsonify(_value_payload("co2", CO2_COLUMN, CO2_UNIT, name, year, value))
+            return jsonify({
+                'feature': 'co2',
+                'metric': CO2_COLUMN,
+                'entity': name,
+                'year': year,
+                'value': value,
+                'unit': CO2_UNIT,
+            })
 
         year, top_n, rows = _co2_list_data()
-        payload = _list_payload("co2", CO2_COLUMN, CO2_UNIT, year, rows, top_n)
-        return jsonify(payload)
+        return jsonify({
+            'feature': 'co2',
+            'metric': CO2_COLUMN,
+            'year': year,
+            'top_n': min(top_n, len(rows)),
+            'unit': CO2_UNIT,
+            'rows': _json_rows(rows),
+        })
     except ValueError as exc:
         return _api_error(exc)
 
@@ -357,13 +325,28 @@ def api_ranking(entity: Optional[str] = None):
     try:
         if entity:
             name, year, order, rank, total, value = _ranking_data(entity)
-            return jsonify(_ranking_payload(name, year, order, rank, total, value))
+            return jsonify({
+                'feature': 'ranking',
+                'metric': FOREST_CHANGE_COLUMN,
+                'entity': name,
+                'year': year,
+                'order': order,
+                'rank': rank,
+                'total': total,
+                'value': value,
+                'unit': FOREST_UNIT,
+            })
 
         year, order, top_n, rows = _forest_list_data()
-        payload = _list_payload(
-            "ranking", FOREST_CHANGE_COLUMN, FOREST_UNIT, year, rows, top_n, order
-        )
-        return jsonify(payload)
+        return jsonify({
+            'feature': 'ranking',
+            'metric': FOREST_CHANGE_COLUMN,
+            'year': year,
+            'order': order,
+            'top_n': min(top_n, len(rows)),
+            'unit': FOREST_UNIT,
+            'rows': _json_rows(rows),
+        })
     except ValueError as exc:
         return _api_error(exc)
 

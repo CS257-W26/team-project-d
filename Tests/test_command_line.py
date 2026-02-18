@@ -7,10 +7,10 @@ from __future__ import annotations
 import contextlib
 import io
 import unittest
+from typing import List, Tuple
 from unittest.mock import MagicMock, patch
 
 import command_line
-from typing import List, Tuple
 
 
 class TestCommandLine(unittest.TestCase):

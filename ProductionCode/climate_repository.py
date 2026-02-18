@@ -190,18 +190,6 @@ class ClimateRepository:
             return _FOREST_BEFORE_WHERE[order]
         raise ValueError("order must be 'loss' or 'gain'.")
 
-    def _forest_rank(
-        self, entity: str, year: int, order: str, value: float, only_countries: bool
-    ) -> int:
-        """return the rank for a known entity/year/value triple"""
-        sql = _SQL_FOREST_RANK.format(
-            join=self._join(only_countries), before_where=self._forest_before_where(order)
-        )
-        row = self._first(sql, year=year, value=value, entity=entity)
-        if row and row["rank"] is not None:
-            return int(row["rank"])
-        raise ValueError(f"No forest change data for {entity} in {year}.")
-
     def forest_rank_entities(
         self, year: int, order: str, top_n: int, only_countries: bool
     ) -> List[Tuple[str, float]]:
@@ -224,8 +212,14 @@ class ClimateRepository:
         entity = match_entity_name(entity_query, self.forest_entities(only_countries))
         year_used = year or self.forest_latest_year_for_entity(entity, only_countries)
         value = self._forest_value(entity, year_used, only_countries)
-        rank = self._forest_rank(entity, year_used, order, value, only_countries)
-        return entity, year_used, rank, value
+        sql = _SQL_FOREST_RANK.format(
+            join=self._join(only_countries),
+            before_where=self._forest_before_where(order),
+        )
+        row = self._first(sql, year=year_used, value=value, entity=entity)
+        if not row or row["rank"] is None:
+            raise ValueError(f"No forest change data for {entity} in {year_used}.")
+        return entity, year_used, int(row["rank"]), value
 
     def co2_top_emitters(
         self, year: int, top_n: int, only_countries: bool
