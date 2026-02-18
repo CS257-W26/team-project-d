@@ -2,7 +2,7 @@
 import inspect
 import sys
 
-from ProductionCode.datasource import DataSource
+from datasource import DataSource
 
 def process(args: list, ds: DataSource):
     """
