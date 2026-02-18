@@ -13,7 +13,7 @@ from ProductionCode.climate_repository import ClimateRepository
 class FakeRows(list):
     """tiny stand-in for records.RecordCollection returned by db.query"""
     def first(self):
-        """return the first row or none if the collection is empty"""
+        """return the first row or None if the collection is empty"""
         return self[0] if self else None
 
 
@@ -72,7 +72,6 @@ _CO2_RULES: list[tuple[tuple[str, ...], list[dict[str, Any]]]] = [
 
 class FakeDb:
     """fake database returning deterministic rows based on the SQL string"""
-
     def __init__(self):
         self.calls: list[tuple[str, dict[str, Any]]] = []
 

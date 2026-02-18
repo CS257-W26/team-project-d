@@ -11,6 +11,7 @@ from ProductionCode.numbers import format_number, parse_float, parse_int
 
 class TestNumbers(unittest.TestCase):
     """tests for ProductionCode.numbers"""
+
     def test_parse_int_strips_whitespace(self) -> None:
         """parse_int should strip whitespace before converting"""
         self.assertEqual(42, parse_int("  42  "))

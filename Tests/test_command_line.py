@@ -10,11 +10,12 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import command_line
+from typing import List, Tuple
 
 
 class TestCommandLine(unittest.TestCase):
     """clu tests for argument parsing + formatting"""
-    def run_cli(self, argv: list[str]) -> tuple[int, str, str]:
+    def run_cli(self, argv: List[str]) -> Tuple[int, str, str]:
         """run the cli and capture (exit_code, stdout, stderr)"""
         stdout = io.StringIO()
         stderr = io.StringIO()

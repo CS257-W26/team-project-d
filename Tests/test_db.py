@@ -1,5 +1,5 @@
 """
-Unit tests for ProductionCode.db.
+Unit tests for ProductionCode.db
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from ProductionCode import db
 
 class TestDbConfig(unittest.TestCase):
     """tests for connection-string building and config parsing"""
+
     def test_get_db_url_prefers_environment_variable(self) -> None:
         """if DATABASE_URL is set, it should be returned verbatim"""
         os.environ["DATABASE_URL"] = "postgresql://example"
@@ -24,7 +25,7 @@ class TestDbConfig(unittest.TestCase):
             os.environ.pop("DATABASE_URL", None)
 
     def test_get_db_url_supports_multiple_variable_names(self) -> None:
-        """config can use variable names"""
+        """config can use DATABASE/USER/PASSWORD/HOST/PORT variable names"""
         fake_cfg = types.ModuleType("ProductionCode.psql_config")
         fake_cfg.DATABASE = "team_db"
         fake_cfg.USER = "alice"

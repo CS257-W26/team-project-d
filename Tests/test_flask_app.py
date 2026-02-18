@@ -105,6 +105,7 @@ class TestFlaskHtmlRoutes(BaseFlaskTest):
 
     def test_include_aggregates_allows_world(self) -> None:
         """include_aggregates should allow querying non-country entities like world"""
+
         def side_effect(entity_query, year, only_countries):
             if entity_query == "World" and only_countries:
                 raise ValueError("Unknown entity name.")
@@ -189,7 +190,7 @@ class TestFlaskApiRoutes(BaseFlaskTest):
     """tests for json api endpoints"""
 
     def test_api_deforestation_value(self) -> None:
-        """api should return JSON payload for a single deforestation query"""
+        """api should return json payload for a single deforestation query"""
         self.repo.forest_value_for_entity_year.return_value = ("United States", 2021, -72000.0)
 
         resp = self.client.get("/api/deforestation/United_States?year=2021")
@@ -209,7 +210,7 @@ class TestFlaskApiRoutes(BaseFlaskTest):
         self.assertIn("error", data)
 
     def test_api_co2_list(self) -> None:
-        """api should return a ranked list of co2 emitters"""
+        """api should return a ranked list of CO2 emitters"""
         self.repo.co2_top_emitters.return_value = [("Qatar", 40.0)]
 
         resp = self.client.get("/api/co2?year=2021&top=1")
@@ -257,7 +258,7 @@ class TestFlaskApiRoutes(BaseFlaskTest):
         self.assertEqual(2021, data["year"])
 
     def test_api_ranking_list(self) -> None:
-        """api should return json for the ranking list endpoint"""
+        """api should return JSON for the ranking list endpoint"""
         self.repo.forest_rank_entities.return_value = [("Brazil", -10.0)]
 
         resp = self.client.get("/api/ranking?year=2021&top=1&order=loss")
@@ -308,6 +309,7 @@ class TestFlaskApiRoutes(BaseFlaskTest):
 
 class TestFlaskParsingHelpers(unittest.TestCase):
     """unit tests for small parsing helpers in flask_app"""
+
     def test_parse_optional_int_blank_string_returns_none(self) -> None:
         """blank query params should be treated as missing"""
         self.assertIsNone(flask_app.parse_optional_int("   ", "year"))
