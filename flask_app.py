@@ -21,7 +21,7 @@ def co2_results():
         data = ds.query_regions("co2", "co2_per_capita", [country, year])
         if not data:
             return "No CO₂ data found for that input."
-        return render_template("country.html", data=data)
+        return render_template("info.html", data=data)
     except ValueError:
         return "Invalid input. Please check your country and year."
 
