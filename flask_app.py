@@ -5,13 +5,12 @@ from ProductionCode.datasource import DataSource
 app = Flask(__name__)
 ds = DataSource()
 
-@app.route("/")
-def homepage():
-    """Homepage."""
-    return "page"
+@app.route("/co2")
+def co2_page():
+    return render_template("co2.html")
 
-@app.route('/co2')
-def co2(): 
+@app.route("/co2/results")
+def co2_results():
     country = request.args.get("name")
     year = request.args.get("year")
     if not country:
@@ -22,7 +21,7 @@ def co2():
         data = ds.query_regions("co2", "co2_per_capita", [country, year])
         if not data:
             return "No CO₂ data found for that input."
-        return render_template("country.html", data = data)
+        return render_template("country.html", data=data)
     except ValueError:
         return "Invalid input. Please check your country and year."
 
