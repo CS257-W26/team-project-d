@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    </head>
+    <body>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/co2" class="active">CO2 Data</a></li>
+            <li><a href="/about">About</a></li>
+        </ul>
+
+        <h1 class="heading">CO₂ Data</h1>
+
+        <p class="information">
+            This demo dataset provides a simplified view of CO₂ emissions per capita 
+            across several countries. It allows you to explore how carbon emissions 
+            vary across regions and how they have changed over time.
+        </p>
+
+        <img src="https://wallpaperaccess.com/full/1782036.jpg" alt="A photo">
+
+        <form action="/co2" method="get" style="text-align:center; margin-top:20px;">
+            <label for="country">Enter a country:</label>
+            <input type="text" id="country" name="name" placeholder="e.g., China">
+
+            <label for="year">Choose a year:</label>
+            <input type="number" id="year" name="year">
+
+            <button type="submit" class="dropbtn">Go</button>
+        </form>
+    </body>
+</html>

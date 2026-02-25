@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/co2" class="active">CO2 Data</a></li>
+        <li><a href="/about">About</a></li>
+    </ul>
+
+    <h1>{{ data.entity }}</h1>
+
+    <div class="data-block">
+        Year: {{ data.year }}<br>
+        CO₂ per capita: {{ data.co2_per_capita }}
+    </div>
+
+</body>
+</html>
