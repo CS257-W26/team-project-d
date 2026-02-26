@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+  <h1>Page not found (404)</h1>
+  <p class="lead">This URL doesn’t exist on this site.</p>
+</section>
+
+<section class="card">
+  <h2>What you can do</h2>
+  <ul>
+    <li>Go to the <a href="{{ url_for('home') }}">homepage</a> and choose a feature.</li>
+    <li>Use <a href="{{ url_for('deforestation_page') }}">Deforestation lookup</a>: pick a country and a year (e.g., Algeria, 2020).</li>
+    <li>Use <a href="{{ url_for('co2_page') }}">CO₂ lookup</a>: pick a country and a year (e.g., Germany, 2020).</li>
+    <li>Use <a href="{{ url_for('ranking_page') }}">Ranking</a>: pick a country and year to see both ranks.</li>
+  </ul>
+  <p class="muted">Might wanna double-check spelling and slashes if you typed in the URL manually.</p>
+</section>
+{% endblock %}

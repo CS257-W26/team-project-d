@@ -1,32 +1,19 @@
 """
 deforestation_queries.py
 Database-backed queries for deforestation (annual change in forest area).
-
-Improvements over the existing DataSource style:
-- Filtering/sorting happens in SQL (no SELECT-all then Python filter).
-- Clear, single-responsibility methods with stable return schemas.
-- Parameterized queries to avoid SQL injection and type bugs.
 """
 
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
-
 import records
-
-# NOTE:
-# Put your real creds in ProductionCode/psql_config.py, like your existing file does.
-# This module intentionally imports lazily to make unit tests easier to patch.
-try:
-    import ProductionCode.psql_config as config  # type: ignore
-except Exception:  # pragma: no cover
-    config = None  # tests can inject db without needing psql_config
-
+import ProductionCode.psql_config as config
 
 @dataclass(frozen=True)
 class DeforestationRow:
-    """Typed result row for deforestation queries."""
+    """
+    deforestation queries
+    """
     entity: str
     year: int
     annual_change_forest_area: float
@@ -36,16 +23,13 @@ class DeforestationRow:
 class DeforestationDataSource:
     """
     Data access layer for deforestation.
-
-    Table expectation (recommended):
-        forest_change(entity TEXT, code TEXT, year INT, annual_change_forest_area DOUBLE PRECISION)
     """
 
     def __init__(self, db: Optional[records.Database] = None) -> None:
         """
         Initialize the datasource.
 
-        Args:
+        Input:
             db: Optional injected records.Database for testing.
         """
         if db is not None:
@@ -54,17 +38,16 @@ class DeforestationDataSource:
 
         if config is None:
             raise RuntimeError(
-                "psql_config not available. On stearns/grader, they will provide it. "
-                "For local tests, inject a fake db."
+                "psql_config not available"
             )
 
-        connect = f"postgresql://{config.user}:{config.password}@localhost:5432/{config.database}"
+        connect = f"postgresql://{config.USER}:{config.PASSWORD}@localhost:5432/{config.DATABASE}"
         self.db = records.Database(connect)
 
-    # ---------- Validation helpers ----------
-
     def year_exists(self, year: int) -> bool:
-        """Return True if the year exists in forest_change."""
+        """
+        Return True if the year exists in forest_change
+        """
         row = self.db.query(
             "SELECT 1 FROM forest_change WHERE year = :year LIMIT 1",
             year=year,
@@ -72,28 +55,27 @@ class DeforestationDataSource:
         return row is not None
 
     def entity_exists(self, entity: str) -> bool:
-        """Return True if entity exists in forest_change."""
+        """
+        Return True if entity exists in forest_change
+        """
         row = self.db.query(
             "SELECT 1 FROM forest_change WHERE entity = :entity LIMIT 1",
             entity=entity,
         ).first()
         return row is not None
 
-    # ---------- Core features ----------
-
     def get_value(self, entity: str, year: int) -> DeforestationRow:
         """
-        Get deforestation value for one entity in one year.
-
-        Args:
-            entity: Country/region name (exact match).
-            year: Year as int.
+        Get deforestation value for one entity in a year
+        Input:
+            entity: Country/region name
+            year: Year
 
         Returns:
             DeforestationRow
 
         Raises:
-            ValueError if not found.
+            ValueError if not found
         """
         row = self.db.query(
             """
@@ -123,9 +105,9 @@ class DeforestationDataSource:
 
     def list_entities(self, year: int) -> List[str]:
         """
-        List all entities available for a given year.
+        List all entities available for a given year
 
-        Args:
+        Input:
             year: year as int
 
         Returns:
@@ -150,9 +132,9 @@ class DeforestationDataSource:
 
     def range_values(self, entity: str, year1: int, year2: int) -> List[DeforestationRow]:
         """
-        Get values for an entity in two years (inclusive endpoints).
+        Get values for an entity in two years (is inclusive)
 
-        Args:
+        Input:
             entity: entity name
             year1: first year
             year2: second year
@@ -192,9 +174,9 @@ class DeforestationDataSource:
 
     def aggregate_sum(self, entities: List[str], year: int) -> Tuple[List[DeforestationRow], float]:
         """
-        Fetch values for multiple entities in a year and also return their sum.
+        Gets values for multiple entities in a year and also return their sum
 
-        Args:
+        Input:
             entities: list of entity names
             year: year
 
@@ -243,9 +225,9 @@ class DeforestationDataSource:
         self, year: int, n: int, order: str
     ) -> List[DeforestationRow]:
         """
-        Get top/bottom N entities by annual_change_forest_area in a given year.
+        Get top/bottom N entities by annual_change_forest_area in a given year
 
-        Args:
+        Input:
             year: year
             n: number of rows
             order: "top" (DESC) or "bottom" (ASC)

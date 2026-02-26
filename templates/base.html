@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container header-inskip-linener">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <a class="brand-name" href="{{url_for('home')}}">Carbon & Forests</a>
+        </div>
+
+        <nav class="nav" aria-label="Primary navigation">
+          <a class="nav-link" href="{{url_for('home') }}">Home</a>
+          <a class="nav-link" href="{{url_for('deforestation_page') }}">Deforestation</a>
+          <a class="nav-link" href="{{url_for('co2_page') }}">CO₂</a>
+          <a class="nav-link" href="{{url_for('ranking_page') }}">Ranking</a>
+          <a class="nav-link" href="{{url_for('about_page') }}">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="container">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
