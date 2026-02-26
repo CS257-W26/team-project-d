@@ -48,6 +48,28 @@ class TestCommandLine(unittest.TestCase):
 
     @patch("command_line.ClimateRepository")
     @patch("command_line.get_db")
+    def test_deforestation_single_value_defaults_to_latest_year(
+        self, mock_get_db, mock_repo_class
+    ) -> None:
+        """omitting --year should pass None to the repository (repo chooses latest year)"""
+        mock_get_db.return_value = MagicMock()
+        repo = mock_repo_class.return_value
+        repo.forest_value_for_entity_year.return_value = ("Brazil", 2021, -10.0)
+
+        code, out, err = self.run_cli(["--deforestation", "Brazil"])
+
+        self.assertEqual(0, code)
+        self.assertEqual("", err)
+        self.assertIn("Brazil in 2021", out)
+
+        repo.forest_value_for_entity_year.assert_called_once_with(
+            entity_query="Brazil",
+            year=None,
+            only_countries=True,
+        )
+
+    @patch("command_line.ClimateRepository")
+    @patch("command_line.get_db")
     def test_deforestation_list(self, mock_get_db, mock_repo_class) -> None:
         """--deforestation (no country) should call forest_rank_entities"""
         mock_get_db.return_value = MagicMock()
@@ -62,7 +84,7 @@ class TestCommandLine(unittest.TestCase):
 
         self.assertEqual(0, code)
         self.assertEqual("", err)
-        self.assertIn("Top 3 entities", out)
+        self.assertIn("Top 3 countries", out)
         self.assertIn("1. Brazil:", out)
 
         repo.forest_rank_entities.assert_called_once_with(
@@ -96,6 +118,26 @@ class TestCommandLine(unittest.TestCase):
 
     @patch("command_line.ClimateRepository")
     @patch("command_line.get_db")
+    def test_co2_single_value_defaults_to_latest_year(self, mock_get_db, mock_repo_class) -> None:
+        """omitting --year should pass None to the repository (repo chooses latest year)"""
+        mock_get_db.return_value = MagicMock()
+        repo = mock_repo_class.return_value
+        repo.co2_value_for_entity_year.return_value = ("Canada", 2021, 14.25)
+
+        code, out, err = self.run_cli(["--co2", "Canada"])
+
+        self.assertEqual(0, code)
+        self.assertEqual("", err)
+        self.assertIn("Canada in 2021", out)
+
+        repo.co2_value_for_entity_year.assert_called_once_with(
+            entity_query="Canada",
+            year=None,
+            only_countries=True,
+        )
+
+    @patch("command_line.ClimateRepository")
+    @patch("command_line.get_db")
     def test_co2_list(self, mock_get_db, mock_repo_class) -> None:
         """--co2 (no country) should call co2_top_emitters"""
 
@@ -107,7 +149,7 @@ class TestCommandLine(unittest.TestCase):
 
         self.assertEqual(0, code)
         self.assertEqual("", err)
-        self.assertIn("Top 2 entities", out)
+        self.assertIn("Top 2 countries", out)
         self.assertIn("1. Qatar:", out)
 
         repo.co2_top_emitters.assert_called_once_with(
@@ -153,6 +195,30 @@ class TestCommandLine(unittest.TestCase):
 
     @patch("command_line.ClimateRepository")
     @patch("command_line.get_db")
+    def test_ranking_single_value_defaults_to_latest_year(
+        self, mock_get_db, mock_repo_class
+    ) -> None:
+        """omitting --year should pass None to the repository (repo chooses latest year)"""
+        mock_get_db.return_value = MagicMock()
+        repo = mock_repo_class.return_value
+        repo.forest_rank_for_entity.return_value = ("Brazil", 2021, 1, -10.0)
+        repo.forest_count_entities_for_year.return_value = 200
+
+        code, out, err = self.run_cli(["--ranking", "Brazil", "--order", "loss"])
+
+        self.assertEqual(0, code)
+        self.assertEqual("", err)
+        self.assertIn("Brazil rank in 2021", out)
+
+        repo.forest_rank_for_entity.assert_called_once_with(
+            entity_query="Brazil",
+            year=None,
+            order="loss",
+            only_countries=True,
+        )
+
+    @patch("command_line.ClimateRepository")
+    @patch("command_line.get_db")
     def test_ranking_list(self, mock_get_db, mock_repo_class) -> None:
         """--ranking (no country) should call forest_rank_entities"""
 
@@ -172,33 +238,6 @@ class TestCommandLine(unittest.TestCase):
             order="loss",
             top_n=2,
             only_countries=True,
-        )
-
-    @patch("command_line.ClimateRepository")
-    @patch("command_line.get_db")
-    def test_include_aggregates_changes_only_countries(self, mock_get_db, mock_repo_class) -> None:
-        """--include-aggregates should flip only_countries=False"""
-
-        mock_get_db.return_value = MagicMock()
-        repo = mock_repo_class.return_value
-        repo.forest_value_for_entity_year.return_value = ("World", 2021, -123.0)
-
-        code, out, err = self.run_cli([
-            "--deforestation",
-            "World",
-            "--year",
-            "2021",
-            "--include-aggregates",
-        ])
-
-        self.assertEqual(0, code)
-        self.assertEqual("", err)
-        self.assertIn("World", out)
-
-        repo.forest_value_for_entity_year.assert_called_once_with(
-            entity_query="World",
-            year=2021,
-            only_countries=False,
         )
 
     @patch("command_line.ClimateRepository")

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="section">
+    <h1>Ranking</h1>
+    <p class="lead">
+      Rank countries by annual change in forest area (largest loss or gain). Use the forms below to
+      look up a single country’s rank or to view a ranked top list.
+    </p>
+  </section>
+
+  <section class="grid two-col" aria-label="Ranking forms">
+    <article class="card">
+      <h2>Lookup rank</h2>
+      <form class="form" method="get" action="{{ url_for('pages.ranking') }}">
+        <label for="entity">Country</label>
+        <input id="entity" name="entity" type="text" value="{{ form.entity }}" placeholder="e.g., Brazil">
+
+        <label for="year">Year (optional)</label>
+        <input id="year" name="year" type="text" inputmode="numeric" value="{{ form.year }}" placeholder="e.g., 2021">
+
+        <label for="order">Order</label>
+        <select id="order" name="order">
+          <option value="loss" {% if form.order == "loss" %}selected{% endif %}>Largest loss</option>
+          <option value="gain" {% if form.order == "gain" %}selected{% endif %}>Largest gain</option>
+        </select>
+
+        <button type="submit" class="btn">Get rank</button>
+      </form>
+    </article>
+
+    <article class="card">
+      <h2>Top list</h2>
+      <form class="form" method="get" action="{{ url_for('pages.ranking') }}">
+        <label for="year_list">Year (optional)</label>
+        <input id="year_list" name="year" type="text" inputmode="numeric" value="{{ form.year }}" placeholder="e.g., 2021">
+
+        <label for="top">Top N</label>
+        <input id="top" name="top" type="text" inputmode="numeric" value="{{ form.top }}" placeholder="e.g., 10">
+
+        <label for="order_list">Order</label>
+        <select id="order_list" name="order">
+          <option value="loss" {% if form.order == "loss" %}selected{% endif %}>Largest loss</option>
+          <option value="gain" {% if form.order == "gain" %}selected{% endif %}>Largest gain</option>
+        </select>
+
+        <button type="submit" class="btn">View top list</button>
+      </form>
+    </article>
+  </section>
+
+  {% if result %}
+    <section class="section" aria-labelledby="result-heading">
+      <h2 id="result-heading">Result</h2>
+      <p class="summary">{{ result.summary }}</p>
+
+      <dl class="kv">
+        <div><dt>Country</dt><dd>{{ result.entity }}</dd></div>
+        <div><dt>Year</dt><dd>{{ result.year }}</dd></div>
+        <div><dt>Rank</dt><dd>{{ result.rank }} of {{ result.total }}</dd></div>
+        <div><dt>Value</dt><dd>{{ result.value }} {{ result.unit }}</dd></div>
+      </dl>
+    </section>
+  {% endif %}
+
+  {% if list_result %}
+    <section class="section" aria-labelledby="list-heading">
+      <h2 id="list-heading">Top list</h2>
+      <p class="summary">{{ list_result.title }}</p>
+
+      <div class="table-wrap">
+        <table>
+          <caption>{{ list_result.title }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Rank</th>
+              <th scope="col">Country</th>
+              <th scope="col">Value ({{ list_result.unit }})</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in list_result.rows %}
+              <tr>
+                <th scope="row">{{ row.rank }}</th>
+                <td>{{ row.entity }}</td>
+                <td>{{ row.value }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

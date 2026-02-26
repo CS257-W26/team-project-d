@@ -31,6 +31,20 @@ class TestFlaskHtmlRoutes(BaseFlaskTest):
         self.assertEqual(200, resp.status_code)
         self.assertIn(b"/deforestation/United_States", resp.data)
 
+    def test_homepage_has_navbar(self) -> None:
+        """homepage should include a navigation bar with key links"""
+        resp = self.client.get("/")
+        self.assertEqual(200, resp.status_code)
+        self.assertIn(b"<nav", resp.data)
+        self.assertIn(b"Deforestation", resp.data)
+        self.assertIn(b"Ranking", resp.data)
+
+    def test_homepage_forms_have_labels(self) -> None:
+        """homepage feature forms should have accessible labels"""
+        resp = self.client.get("/")
+        self.assertIn(b'for="def_entity"', resp.data)
+        self.assertIn(b'id="def_entity"', resp.data)
+
     def test_deforestation_value(self) -> None:
         """a single-entity deforestation query should call the repository correctly"""
         self.repo.forest_value_for_entity_year.return_value = (
@@ -57,7 +71,7 @@ class TestFlaskHtmlRoutes(BaseFlaskTest):
 
         resp = self.client.get("/deforestation?top=2&order=loss")
         self.assertEqual(200, resp.status_code)
-        self.assertIn(b"Top 2 entities", resp.data)
+        self.assertIn(b"Top 2 countries", resp.data)
 
         self.repo.forest_latest_year.assert_called_once_with(True)
         self.repo.forest_rank_entities.assert_called_once_with(
@@ -103,23 +117,6 @@ class TestFlaskHtmlRoutes(BaseFlaskTest):
             only_countries=True,
         )
 
-    def test_include_aggregates_allows_world(self) -> None:
-        """include_aggregates should allow querying non-country entities like world"""
-
-        def side_effect(entity_query, year, only_countries):
-            if entity_query == "World" and only_countries:
-                raise ValueError("Unknown entity name.")
-            return ("World", year, -123.0)
-
-        self.repo.forest_value_for_entity_year.side_effect = side_effect
-
-        resp_default = self.client.get("/deforestation/World?year=2021")
-        self.assertEqual(404, resp_default.status_code)
-
-        resp_ok = self.client.get("/deforestation/World?year=2021&include_aggregates=1")
-        self.assertEqual(200, resp_ok.status_code)
-        self.assertIn(b"World", resp_ok.data)
-
     def test_invalid_query_params_return_404(self) -> None:
         """invalid query-string parameters should return 404 with a helpful message"""
         resp = self.client.get("/co2/Canada?year=not-a-year")
@@ -141,7 +138,7 @@ class TestFlaskHtmlRoutes(BaseFlaskTest):
 
         resp = self.client.get("/co2?top=2")
         self.assertEqual(200, resp.status_code)
-        self.assertIn(b"Top 2 entities", resp.data)
+        self.assertIn(b"Top 2 countries", resp.data)
 
         self.repo.co2_latest_year.assert_called_once_with(True)
         self.repo.co2_top_emitters.assert_called_once_with(
@@ -181,7 +178,8 @@ class TestFlaskHtmlRoutes(BaseFlaskTest):
 
     def test_500_handler_callable(self) -> None:
         """the internal server error handler should return 500 status"""
-        body, status = flask_app.internal_server_error(Exception("boom"))
+        with self.app.test_request_context("/"):
+            body, status = flask_app.internal_server_error(Exception("boom"))
         self.assertEqual(500, status)
         self.assertIn("Caterpie", body)
 
@@ -313,16 +311,6 @@ class TestFlaskParsingHelpers(unittest.TestCase):
     def test_parse_optional_int_blank_string_returns_none(self) -> None:
         """blank query params should be treated as missing"""
         self.assertIsNone(flask_app.parse_optional_int("   ", "year"))
-
-    def test_parse_bool_accepts_false_values(self) -> None:
-        """parse_bool should recognize common false strings"""
-        self.assertFalse(flask_app.parse_bool("0", default=True))
-        self.assertFalse(flask_app.parse_bool("false", default=True))
-
-    def test_parse_bool_unknown_value_returns_default(self) -> None:
-        """unknown strings should fall back to the default"""
-        self.assertTrue(flask_app.parse_bool("maybe", default=True))
-        self.assertFalse(flask_app.parse_bool("maybe", default=False))
 
     def test_repo_missing_raises_runtime_error(self) -> None:
         """routes should raise RuntimeError if the repository is not configured"""

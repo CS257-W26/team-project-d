@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="section">
+    <h1>About this site</h1>
+    <p class="lead">
+      This project provides both a user-facing website and a JSON API for exploring
+      climate-related datasets (forest change and CO₂ emissions per capita).
+    </p>
+
+    <h2>How to use the website</h2>
+    <ul>
+      <li><strong>Deforestation</strong>: look up annual change in forest area for a country and year.</li>
+      <li><strong>CO₂</strong>: look up annual CO₂ emissions per capita for a country and year.</li>
+      <li><strong>Ranking</strong>: see how a country ranks for forest change (loss or gain).</li>
+    </ul>
+
+    <h2>API access</h2>
+    <p>
+      JSON endpoints are available under the <code>/api</code> prefix. For example:
+    </p>
+    <ul>
+      <li><a href="/api/deforestation/United_States?year=2021">JSON: deforestation for United States (2021)</a></li>
+      <li><a href="/api/co2?year=2021&top=3">JSON: CO₂ per capita top 3 (2021)</a></li>
+    </ul>
+  </section>
+{% endblock %}

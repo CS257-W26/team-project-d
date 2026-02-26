@@ -6,52 +6,38 @@ from __future__ import annotations
 
 from typing import List, Optional, Sequence, Tuple
 
-from flask import Blueprint, Flask, abort, current_app, jsonify, request
-from markupsafe import escape
+from flask import Blueprint, Flask, abort, current_app, jsonify, render_template, request
 
 from ProductionCode.climate_repository import CO2_COLUMN, FOREST_CHANGE_COLUMN, ClimateRepository
 from ProductionCode.db import get_db
+from ProductionCode.numbers import format_number
 from ProductionCode.output_format import RankContext, RankResult
-from ProductionCode.output_format import format_rank_result, format_single_value, format_top_list
+from ProductionCode.output_format import format_rank_result, format_single_value
 
 DEFAULT_TOP_N = 10
 FOREST_UNIT = "ha"
 CO2_UNIT = "t/person"
 
+ONLY_COUNTRIES = True
+
 pages = Blueprint("pages", __name__)
 api = Blueprint("api", __name__)
 
-_HOME_BODY = (
-    "<h1>Climate Data Explorer</h1>"
-    "<p>Try these examples:</p>"
-    "<ul>"
-    "<li><a href='/deforestation/United_States?year=2021'>"
-    "/deforestation/United_States?year=2021</a></li>"
-    "<li><a href='/co2/Canada?year=2021'>/co2/Canada?year=2021</a></li>"
-    "<li><a href='/ranking/Brazil?year=2021&amp;order=loss'>"
-    "/ranking/Brazil?year=2021&amp;order=loss</a></li>"
-    "<li><a href='/api/deforestation/United_States?year=2021'>"
-    "/api/deforestation/United_States?year=2021</a></li>"
-    "</ul>"
-)
-
-
-def render_page(title: str, body_html: str) -> str:
-    """wrap body_html in a minimal html page"""
-    safe_title = escape(title)
-    return (
-        "<!doctype html><html><head><meta charset='utf-8'>"
-        f"<title>{safe_title}</title></head><body>{body_html}</body></html>"
-    )
-
-
-def render_pre_page(title: str, heading: str, text: str) -> str:
-    """render a simple page with a heading and <pre> block"""
-    body = (
-        f"<h1>{escape(heading)}</h1><pre>{escape(text)}</pre>"
-        "<p><a href='/'>Home</a></p>"
-    )
-    return render_page(title, body)
+_EXAMPLES = [
+    {
+        "label": "Deforestation for United States (2021)",
+        "href": "/deforestation/United_States?year=2021",
+    },
+    {"label": "CO₂ per capita for Canada (2021)", "href": "/co2/Canada?year=2021"},
+    {
+        "label": "Forest change ranking for Brazil (2021, loss)",
+        "href": "/ranking/Brazil?year=2021&order=loss",
+    },
+    {
+        "label": "JSON API example (deforestation)",
+        "href": "/api/deforestation/United_States?year=2021",
+    },
+]
 
 
 def parse_optional_int(raw: Optional[str], param_name: str) -> Optional[int]:
@@ -72,18 +58,6 @@ def parse_optional_positive_int(raw: Optional[str], param_name: str) -> Optional
     return value
 
 
-def parse_bool(raw: Optional[str], default: bool = False) -> bool:
-    """parse a loose boolean query parameter"""
-    if raw is None:
-        return default
-    value = raw.strip().lower()
-    if value in {"1", "true"}:
-        return True
-    if value in {"0", "false"}:
-        return False
-    return default
-
-
 def parse_order(raw: Optional[str], default: str = "loss") -> str:
     """parse loss/gain ordering"""
     value = (raw or "").strip().lower() or default
@@ -93,7 +67,7 @@ def parse_order(raw: Optional[str], default: str = "loss") -> str:
 
 
 def normalize_entity_param(entity_param: str) -> str:
-    """convert url path entity into a dataset-style entity name"""
+    """convert a URL path entity into a dataset-style entity name"""
     return entity_param.replace("_", " ").replace("-", " ").strip()
 
 
@@ -120,14 +94,54 @@ def _order() -> str:
     return parse_order(request.args.get("order"), default="loss")
 
 
-def _only_countries() -> bool:
-    """return true unless include_aggregates is enabled"""
-    return not parse_bool(request.args.get("include_aggregates"), default=False)
+def _entity(path_entity: Optional[str]) -> Optional[str]:
+    """return an entity name from path param or query string"""
+    raw = (path_entity or request.args.get("entity") or "").strip()
+    return normalize_entity_param(raw) if raw else None
 
 
-def _json_rows(rows: Sequence[Tuple[str, float]]) -> List[dict]:
-    """convert rows into a JSON-friendly shape"""
-    return [{"entity": entity, "value": value} for entity, value in rows]
+def _rows_view(rows: Sequence[Tuple[str, float]]) -> List[dict]:
+    """convert ranked rows into a template-friendly shape"""
+    return [
+        {"rank": idx, "entity": entity, "value": format_number(value)}
+        for idx, (entity, value) in enumerate(rows, start=1)
+    ]
+
+
+def _value_view(metric: str, unit: str, name: str, year: int, value: float) -> dict:
+    """build a display dict for a single numeric value"""
+    return {
+        "metric": metric,
+        "unit": unit,
+        "entity": name,
+        "year": year,
+        "value": format_number(value),
+        "summary": format_single_value(name, year, metric, value, unit),
+    }
+
+
+def _rank_view(result: RankResult) -> dict:
+    """build a display dict for a single ranking result"""
+    summary = format_rank_result(result)
+    return {
+        "entity": result.entity,
+        "year": result.year,
+        "order": result.context.order,
+        "rank": result.rank,
+        "total": result.total,
+        "value": format_number(result.value),
+        "unit": result.context.unit,
+        "summary": summary,
+    }
+
+def _form_defaults() -> dict:
+    """return current query-string values for form defaults"""
+    return {
+        "entity": request.args.get("entity", ""),
+        "year": request.args.get("year", ""),
+        "top": request.args.get("top", ""),
+        "order": request.args.get("order", ""),
+    }
 
 
 def _forest_value_data(entity: str) -> Tuple[str, int, float]:
@@ -135,51 +149,57 @@ def _forest_value_data(entity: str) -> Tuple[str, int, float]:
     return _repo().forest_value_for_entity_year(
         entity_query=normalize_entity_param(entity),
         year=_year(),
-        only_countries=_only_countries(),
+        only_countries=ONLY_COUNTRIES,
     )
 
 
 def _co2_value_data(entity: str) -> Tuple[str, int, float]:
-    """return (entity, year, value) for co2 per-capita"""
+    """return (entity, year, value) for CO2 per-capita"""
     return _repo().co2_value_for_entity_year(
         entity_query=normalize_entity_param(entity),
         year=_year(),
-        only_countries=_only_countries(),
+        only_countries=ONLY_COUNTRIES,
     )
 
 
 def _forest_list_data() -> Tuple[int, str, int, Sequence[Tuple[str, float]]]:
     """return (year, order, top_n, rows) for forest-change top lists"""
-    only = _only_countries()
     order = _order()
     top_n = _top()
-    year = _year() or _repo().forest_latest_year(only)
-    rows = _repo().forest_rank_entities(year=year, order=order, top_n=top_n, only_countries=only)
+    year = _year() or _repo().forest_latest_year(ONLY_COUNTRIES)
+    rows = _repo().forest_rank_entities(
+        year=year,
+        order=order,
+        top_n=top_n,
+        only_countries=ONLY_COUNTRIES,
+    )
     return year, order, top_n, rows
 
 
 def _co2_list_data() -> Tuple[int, int, Sequence[Tuple[str, float]]]:
-    """return (year, top_n, rows) for co2 per-capita top lists"""
-    only = _only_countries()
+    """return (year, top_n, rows) for CO2 per-capita top lists"""
     top_n = _top()
-    year = _year() or _repo().co2_latest_year(only)
-    rows = _repo().co2_top_emitters(year=year, top_n=top_n, only_countries=only)
+    year = _year() or _repo().co2_latest_year(ONLY_COUNTRIES)
+    rows = _repo().co2_top_emitters(
+        year=year,
+        top_n=top_n,
+        only_countries=ONLY_COUNTRIES,
+    )
     return year, top_n, rows
 
 
-def _ranking_data(entity: str) -> Tuple[str, int, str, int, int, float]:
-    """return (entity, year, order, rank, total, value) for a ranking"""
-    only = _only_countries()
+def _ranking_data(entity: str) -> RankResult:
+    """return a RankResult for forest-change ranking"""
     order = _order()
     name, year, rank, value = _repo().forest_rank_for_entity(
         entity_query=normalize_entity_param(entity),
         year=_year(),
         order=order,
-        only_countries=only,
+        only_countries=ONLY_COUNTRIES,
     )
-    total = _repo().forest_count_entities_for_year(year=year, only_countries=only)
-    return name, year, order, rank, total, value
-
+    total = _repo().forest_count_entities_for_year(year=year, only_countries=ONLY_COUNTRIES)
+    ctx = RankContext(metric=FOREST_CHANGE_COLUMN, unit=FOREST_UNIT, order=order)
+    return RankResult(name, year, ctx, rank, total, value)
 
 def _top_list_title(
     metric: str,
@@ -189,30 +209,47 @@ def _top_list_title(
     order: Optional[str] = None,
 ) -> str:
     """build the title line for a formatted top list"""
-    prefix = f"Top {min(top_n, len(rows))} entities for {metric} in {year}"
+    prefix = f"Top {min(top_n, len(rows))} countries for {metric} in {year}"
     return f"{prefix} (order={order})" if order is not None else prefix
 
 
 @pages.route("/")
 def homepage():
-    """homepage with a few working example links"""
-    return render_page("Home", _HOME_BODY)
+    """styled homepage with forms and example links"""
+    return render_template("home.html", active_page="home", examples=_EXAMPLES)
+
+
+@pages.route("/about")
+def about():
+    """short about/help page"""
+    return render_template("about.html", active_page="about")
 
 
 @pages.route("/deforestation")
 @pages.route("/deforestation/<string:entity>")
 def deforestation(entity: Optional[str] = None):
-    """html endpoint for forest-change queries"""
+    """user-facing page for forest-change"""
     try:
-        if entity:
-            name, year, value = _forest_value_data(entity)
-            text = format_single_value(name, year, FOREST_CHANGE_COLUMN, value, FOREST_UNIT)
-            return render_pre_page("Deforestation", "Deforestation", text)
+        name = _entity(entity)
+        if name:
+            entity_name, year, value = _forest_value_data(name)
+            result = _value_view(FOREST_CHANGE_COLUMN, FOREST_UNIT, entity_name, year, value)
+            return render_template(
+                "deforestation.html",
+                active_page="deforestation",
+                result=result,
+                form=_form_defaults(),
+            )
 
         year, order, top_n, rows = _forest_list_data()
         title = _top_list_title(FOREST_CHANGE_COLUMN, year, top_n, rows, order)
-        text = format_top_list(title, rows, FOREST_UNIT)
-        return render_pre_page("Deforestation", f"Deforestation {year}", text)
+        list_result = {"title": title, "unit": FOREST_UNIT, "rows": _rows_view(rows)}
+        return render_template(
+            "deforestation.html",
+            active_page="deforestation",
+            list_result=list_result,
+            form=_form_defaults(),
+        )
     except ValueError as exc:
         abort(404, description=str(exc))
 
@@ -220,17 +257,28 @@ def deforestation(entity: Optional[str] = None):
 @pages.route("/co2")
 @pages.route("/co2/<string:entity>")
 def co2(entity: Optional[str] = None):
-    """html endpoint for co2 per-capita queries"""
+    """user-facing page for CO2 per-capita"""
     try:
-        if entity:
-            name, year, value = _co2_value_data(entity)
-            text = format_single_value(name, year, CO2_COLUMN, value, CO2_UNIT)
-            return render_pre_page("CO₂", "CO₂ per capita", text)
+        name = _entity(entity)
+        if name:
+            entity_name, year, value = _co2_value_data(name)
+            result = _value_view(CO2_COLUMN, CO2_UNIT, entity_name, year, value)
+            return render_template(
+                "co2.html",
+                active_page="co2",
+                result=result,
+                form=_form_defaults(),
+            )
 
         year, top_n, rows = _co2_list_data()
         title = _top_list_title(CO2_COLUMN, year, top_n, rows)
-        text = format_top_list(title, rows, CO2_UNIT)
-        return render_pre_page("CO₂", f"CO₂ per capita {year}", text)
+        list_result = {"title": title, "unit": CO2_UNIT, "rows": _rows_view(rows)}
+        return render_template(
+            "co2.html",
+            active_page="co2",
+            list_result=list_result,
+            form=_form_defaults(),
+        )
     except ValueError as exc:
         abort(404, description=str(exc))
 
@@ -238,18 +286,28 @@ def co2(entity: Optional[str] = None):
 @pages.route("/ranking")
 @pages.route("/ranking/<string:entity>")
 def ranking(entity: Optional[str] = None):
-    """html endpoint for forest-change ranking queries"""
+    """user-facing page for forest-change ranking"""
     try:
-        if entity:
-            name, year, order, rank, total, value = _ranking_data(entity)
-            ctx = RankContext(metric=FOREST_CHANGE_COLUMN, unit=FOREST_UNIT, order=order)
-            text = format_rank_result(RankResult(name, year, ctx, rank, total, value))
-            return render_pre_page("Ranking", "Ranking", text)
+        name = _entity(entity)
+        if name:
+            ranking_result = _ranking_data(name)
+            result = _rank_view(ranking_result)
+            return render_template(
+                "ranking.html",
+                active_page="ranking",
+                result=result,
+                form=_form_defaults(),
+            )
 
         year, order, _, rows = _forest_list_data()
         title = f"Forest change ranking for {year} (order={order})"
-        text = format_top_list(title, rows, FOREST_UNIT)
-        return render_pre_page("Ranking", f"Ranking {year}", text)
+        list_result = {"title": title, "unit": FOREST_UNIT, "rows": _rows_view(rows)}
+        return render_template(
+            "ranking.html",
+            active_page="ranking",
+            list_result=list_result,
+            form=_form_defaults(),
+        )
     except ValueError as exc:
         abort(404, description=str(exc))
 
@@ -259,6 +317,11 @@ def _api_error(exc: Exception):
     return jsonify({"error": str(exc)}), 404
 
 
+def _json_rows(rows: Sequence[Tuple[str, float]]) -> List[dict]:
+    """convert rows into a json-friendly shape"""
+    return [{"entity": entity, "value": value} for entity, value in rows]
+
+
 @api.route("/deforestation")
 @api.route("/deforestation/<string:entity>")
 def api_deforestation(entity: Optional[str] = None):
@@ -266,25 +329,29 @@ def api_deforestation(entity: Optional[str] = None):
     try:
         if entity:
             name, year, value = _forest_value_data(entity)
-            return jsonify({
-                'feature': 'deforestation',
-                'metric': FOREST_CHANGE_COLUMN,
-                'entity': name,
-                'year': year,
-                'value': value,
-                'unit': FOREST_UNIT,
-            })
+            return jsonify(
+                {
+                    "feature": "deforestation",
+                    "metric": FOREST_CHANGE_COLUMN,
+                    "entity": name,
+                    "year": year,
+                    "value": value,
+                    "unit": FOREST_UNIT,
+                }
+            )
 
         year, order, top_n, rows = _forest_list_data()
-        return jsonify({
-            'feature': 'deforestation',
-            'metric': FOREST_CHANGE_COLUMN,
-            'year': year,
-            'order': order,
-            'top_n': min(top_n, len(rows)),
-            'unit': FOREST_UNIT,
-            'rows': _json_rows(rows),
-        })
+        return jsonify(
+            {
+                "feature": "deforestation",
+                "metric": FOREST_CHANGE_COLUMN,
+                "year": year,
+                "order": order,
+                "top_n": min(top_n, len(rows)),
+                "unit": FOREST_UNIT,
+                "rows": _json_rows(rows),
+            }
+        )
     except ValueError as exc:
         return _api_error(exc)
 
@@ -292,28 +359,32 @@ def api_deforestation(entity: Optional[str] = None):
 @api.route("/co2")
 @api.route("/co2/<string:entity>")
 def api_co2(entity: Optional[str] = None):
-    """json endpoint for co2 per-capita queries"""
+    """json endpoint for CO2 per-capita queries"""
     try:
         if entity:
             name, year, value = _co2_value_data(entity)
-            return jsonify({
-                'feature': 'co2',
-                'metric': CO2_COLUMN,
-                'entity': name,
-                'year': year,
-                'value': value,
-                'unit': CO2_UNIT,
-            })
+            return jsonify(
+                {
+                    "feature": "co2",
+                    "metric": CO2_COLUMN,
+                    "entity": name,
+                    "year": year,
+                    "value": value,
+                    "unit": CO2_UNIT,
+                }
+            )
 
         year, top_n, rows = _co2_list_data()
-        return jsonify({
-            'feature': 'co2',
-            'metric': CO2_COLUMN,
-            'year': year,
-            'top_n': min(top_n, len(rows)),
-            'unit': CO2_UNIT,
-            'rows': _json_rows(rows),
-        })
+        return jsonify(
+            {
+                "feature": "co2",
+                "metric": CO2_COLUMN,
+                "year": year,
+                "top_n": min(top_n, len(rows)),
+                "unit": CO2_UNIT,
+                "rows": _json_rows(rows),
+            }
+        )
     except ValueError as exc:
         return _api_error(exc)
 
@@ -324,60 +395,53 @@ def api_ranking(entity: Optional[str] = None):
     """json endpoint for forest-change ranking queries"""
     try:
         if entity:
-            name, year, order, rank, total, value = _ranking_data(entity)
-            return jsonify({
-                'feature': 'ranking',
-                'metric': FOREST_CHANGE_COLUMN,
-                'entity': name,
-                'year': year,
-                'order': order,
-                'rank': rank,
-                'total': total,
-                'value': value,
-                'unit': FOREST_UNIT,
-            })
+            result = _ranking_data(entity)
+            return jsonify(
+                {
+                    "feature": "ranking",
+                    "metric": FOREST_CHANGE_COLUMN,
+                    "entity": result.entity,
+                    "year": result.year,
+                    "order": result.context.order,
+                    "rank": result.rank,
+                    "total": result.total,
+                    "value": result.value,
+                    "unit": result.context.unit,
+                }
+            )
 
         year, order, top_n, rows = _forest_list_data()
-        return jsonify({
-            'feature': 'ranking',
-            'metric': FOREST_CHANGE_COLUMN,
-            'year': year,
-            'order': order,
-            'top_n': min(top_n, len(rows)),
-            'unit': FOREST_UNIT,
-            'rows': _json_rows(rows),
-        })
+        return jsonify(
+            {
+                "feature": "ranking",
+                "metric": FOREST_CHANGE_COLUMN,
+                "year": year,
+                "order": order,
+                "top_n": min(top_n, len(rows)),
+                "unit": FOREST_UNIT,
+                "rows": _json_rows(rows),
+            }
+        )
     except ValueError as exc:
         return _api_error(exc)
-
-
-def _not_found_body(message: str) -> str:
-    """return the 404 page html"""
-    return (
-        "<h1>404 - Not Found</h1>"
-        f"<p>{escape(message)}</p>"
-        "<p>Try one of these working examples:</p>"
-        "<ul>"
-        "<li><a href='/'>/</a></li>"
-        "<li><a href='/deforestation/United_States?year=2021'>"
-        "/deforestation/United_States?year=2021</a></li>"
-        "</ul>"
-    )
 
 
 def internal_server_error(err):
     """return the custom 500 page"""
     _ = err
-    body = "<h1>500 - Internal Server Error</h1><p>Eek, a Caterpie!</p>"
-    return render_page("500 - Internal Server Error", body), 500
+    return render_template("500.html", active_page=""), 500
 
 
 def register_error_handlers(app: Flask) -> None:
-    """register minimal HTML error handlers"""
+    """register html error handlers"""
+
     @app.errorhandler(404)
     def not_found(err):
         msg = getattr(err, "description", "Page not found.")
-        return render_page("404 - Not Found", _not_found_body(msg)), 404
+        return (
+            render_template("404.html", message=msg, examples=_EXAMPLES, active_page=""),
+            404,
+        )
 
     app.register_error_handler(500, internal_server_error)
 

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="section">
+    <h1>404 - Not Found</h1>
+    <p class="lead">{{ message }}</p>
+
+    <h2>How to use this site</h2>
+    <ul>
+      <li>
+        Use the navigation bar (top of page) or start from the
+        <a href="{{ url_for('pages.homepage') }}">homepage</a>.
+      </li>
+      <li>
+        Country names in URLs use underscores, e.g. <code>United_States</code>.
+        In the forms, you can type spaces (e.g. “United States”).
+      </li>
+      <li>
+        If you omit <code>year</code>, we use the latest available year.
+      </li>
+      <li>
+        If you omit <code>entity</code> (leave the Country field blank), you will see a top list.
+        (This is how the <em>Ranking</em> page shows a list when no country is provided.)
+      </li>
+    </ul>
+
+    <h2>Common routes</h2>
+    <ul>
+      <li><code>/deforestation</code> – forest change lookup or top list</li>
+      <li><code>/co2</code> – CO₂ per capita lookup or top list</li>
+      <li><code>/ranking</code> – country rank or top list (order = loss|gain)</li>
+    </ul>
+
+    <h2>Try one of these working examples</h2>
+    <ul class="example-list">
+      {% for ex in examples %}
+        <li><a href="{{ ex.href }}">{{ ex.label }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

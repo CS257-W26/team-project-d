@@ -17,6 +17,8 @@ DEFAULT_TOP_N = 10
 FOREST_UNIT = "ha"
 CO2_UNIT = "t/person"
 
+ONLY_COUNTRIES = True
+
 
 def _add_features(parser: argparse.ArgumentParser) -> None:
     """add the three mutually-exclusive feature flags"""
@@ -34,11 +36,6 @@ def _add_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--year", type=int, default=None, help="Year (default: latest).")
     parser.add_argument("--top", type=int, default=DEFAULT_TOP_N, help="List size.")
     parser.add_argument("--order", choices=("loss", "gain"), default="loss", help="Ranking order.")
-    parser.add_argument(
-        "--include-aggregates",
-        action="store_true",
-        help="Include aggregates/regions (e.g., World).",
-    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,33 +46,27 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _only_countries(args: argparse.Namespace) -> bool:
-    """return True if the query should be restricted to countries"""
-    return not args.include_aggregates
-
-
 def _deforestation_value(repo: ClimateRepository, args: argparse.Namespace) -> str:
     """return a single forest-change value output"""
     entity, year, value = repo.forest_value_for_entity_year(
         entity_query=args.deforestation,
         year=args.year,
-        only_countries=_only_countries(args),
+        only_countries=ONLY_COUNTRIES,
     )
     return format_single_value(entity, year, FOREST_CHANGE_COLUMN, value, FOREST_UNIT)
 
 
 def _deforestation_list(repo: ClimateRepository, args: argparse.Namespace) -> str:
     """return a forest-change top list output"""
-    only = _only_countries(args)
-    year = args.year or repo.forest_latest_year(only)
+    year = args.year or repo.forest_latest_year(ONLY_COUNTRIES)
     rows = repo.forest_rank_entities(
         year=year,
         order=args.order,
         top_n=args.top,
-        only_countries=only,
+        only_countries=ONLY_COUNTRIES,
     )
     title = (
-        f"Top {min(args.top, len(rows))} entities for {FOREST_CHANGE_COLUMN} "
+        f"Top {min(args.top, len(rows))} countries for {FOREST_CHANGE_COLUMN} "
         f"in {year} (order={args.order})"
     )
     return format_top_list(title, rows, FOREST_UNIT)
@@ -93,17 +84,16 @@ def _co2_value(repo: ClimateRepository, args: argparse.Namespace) -> str:
     entity, year, value = repo.co2_value_for_entity_year(
         entity_query=args.co2,
         year=args.year,
-        only_countries=_only_countries(args),
+        only_countries=ONLY_COUNTRIES,
     )
     return format_single_value(entity, year, CO2_COLUMN, value, CO2_UNIT)
 
 
 def _co2_list(repo: ClimateRepository, args: argparse.Namespace) -> str:
     """return a co2 per-capita top list output"""
-    only = _only_countries(args)
-    year = args.year or repo.co2_latest_year(only)
-    rows = repo.co2_top_emitters(year=year, top_n=args.top, only_countries=only)
-    title = f"Top {min(args.top, len(rows))} entities for {CO2_COLUMN} in {year}"
+    year = args.year or repo.co2_latest_year(ONLY_COUNTRIES)
+    rows = repo.co2_top_emitters(year=year, top_n=args.top, only_countries=ONLY_COUNTRIES)
+    title = f"Top {min(args.top, len(rows))} countries for {CO2_COLUMN} in {year}"
     return format_top_list(title, rows, CO2_UNIT)
 
 
@@ -114,27 +104,25 @@ def run_co2(repo: ClimateRepository, args: argparse.Namespace) -> str:
 
 def _ranking_value(repo: ClimateRepository, args: argparse.Namespace) -> str:
     """return a single-entity ranking output"""
-    only = _only_countries(args)
     entity, year, rank, value = repo.forest_rank_for_entity(
         entity_query=args.ranking,
         year=args.year,
         order=args.order,
-        only_countries=only,
+        only_countries=ONLY_COUNTRIES,
     )
-    total = repo.forest_count_entities_for_year(year=year, only_countries=only)
+    total = repo.forest_count_entities_for_year(year=year, only_countries=ONLY_COUNTRIES)
     ctx = RankContext(metric=FOREST_CHANGE_COLUMN, unit=FOREST_UNIT, order=args.order)
     return format_rank_result(RankResult(entity, year, ctx, rank, total, value))
 
 
 def _ranking_list(repo: ClimateRepository, args: argparse.Namespace) -> str:
     """return the ranking top list output"""
-    only = _only_countries(args)
-    year = args.year or repo.forest_latest_year(only)
+    year = args.year or repo.forest_latest_year(ONLY_COUNTRIES)
     rows = repo.forest_rank_entities(
         year=year,
         order=args.order,
         top_n=args.top,
-        only_countries=only,
+        only_countries=ONLY_COUNTRIES,
     )
     title = f"Forest change ranking for {year} (order={args.order})"
     return format_top_list(title, rows, FOREST_UNIT)

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title if title else "Climate Data Explorer" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="{{ url_for('pages.homepage') }}">Climate Data Explorer</a>
+
+        <nav class="site-nav" aria-label="Primary">
+          <ul>
+            <li>
+              <a href="{{ url_for('pages.homepage') }}"
+                 {% if active_page == "home" %}aria-current="page"{% endif %}>
+                Home
+              </a>
+            </li>
+            <li>
+              <a href="{{ url_for('pages.deforestation') }}"
+                 {% if active_page == "deforestation" %}aria-current="page"{% endif %}>
+                Deforestation
+              </a>
+            </li>
+            <li>
+              <a href="{{ url_for('pages.co2') }}"
+                 {% if active_page == "co2" %}aria-current="page"{% endif %}>
+                CO₂ per capita
+              </a>
+            </li>
+            <li>
+              <a href="{{ url_for('pages.ranking') }}"
+                 {% if active_page == "ranking" %}aria-current="page"{% endif %}>
+                Ranking
+              </a>
+            </li>
+            <li>
+              <a href="{{ url_for('pages.about') }}"
+                 {% if active_page == "about" %}aria-current="page"{% endif %}>
+                About
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="content" class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>
+          Data source: Our World in Data.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

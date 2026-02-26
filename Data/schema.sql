@@ -1,9 +1,8 @@
 -- Schema
---
 -- Tables:
---   * forest_change      - annual change in forest area (ha)
---   * co2_per_capita     - annual CO2 emissions per capita (t/person)
---   * countries          - list of entities treated as countries
+-- forest_change - annual change in forest area (ha)
+-- co2_per_capita - annual CO2 emissions per capita (t/person)
+-- countries - list of entities treated as countries
 
 DROP TABLE IF EXISTS forest_change;
 DROP TABLE IF EXISTS co2_per_capita;
@@ -29,7 +28,6 @@ CREATE TABLE co2_per_capita (
     PRIMARY KEY (entity, year)
 );
 
--- indexes
 CREATE INDEX idx_forest_change_year ON forest_change(year);
 CREATE INDEX idx_forest_change_year_value ON forest_change(year, forest_change_ha);
 CREATE INDEX idx_co2_year ON co2_per_capita(year);

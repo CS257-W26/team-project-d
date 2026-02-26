@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero">
+    <h1>Explore climate metrics by country</h1>
+    <p class="lead">
+      Use the forms below to look up values, view top lists, and compare countries.
+      Results are restricted to countries only.
+    </p>
+  </section>
+
+  <section class="grid" aria-label="Primary features">
+    <article class="card">
+      <h2>Deforestation</h2>
+      <p>Annual change in forest area (ha). Search by country and year, or leave it blank to see a top list.</p>
+
+      <form class="form" method="get" action="{{ url_for('pages.deforestation') }}">
+        <label for="def_entity">Country</label>
+        <input id="def_entity" name="entity" type="text" placeholder="e.g., Brazil">
+
+        <label for="def_year">Year</label>
+        <input id="def_year" name="year" type="text" inputmode="numeric" placeholder="e.g., 2021">
+
+        <label for="def_top">Top N</label>
+        <input id="def_top" name="top" type="text" inputmode="numeric" placeholder="e.g., 10">
+
+        <label for="def_order">Order</label>
+        <select id="def_order" name="order">
+          <option value="loss">Largest loss</option>
+          <option value="gain">Largest gain</option>
+        </select>
+
+        <button type="submit" class="btn">Explore deforestation</button>
+      </form>
+    </article>
+
+    <article class="card">
+      <h2>CO₂ per capita</h2>
+      <p>Annual CO₂ emissions per person (t/person). Search by country and year, or leave it blank to see a top list.</p>
+
+      <form class="form" method="get" action="{{ url_for('pages.co2') }}">
+        <label for="co2_entity">Country</label>
+        <input id="co2_entity" name="entity" type="text" placeholder="e.g., Canada">
+
+        <label for="co2_year">Year</label>
+        <input id="co2_year" name="year" type="text" inputmode="numeric" placeholder="e.g., 2021">
+
+        <label for="co2_top">Top N</label>
+        <input id="co2_top" name="top" type="text" inputmode="numeric" placeholder="e.g., 10">
+
+        <button type="submit" class="btn">Explore CO₂</button>
+      </form>
+    </article>
+
+    <article class="card">
+      <h2>Ranking</h2>
+      <p>Rank a country by forest change (largest loss or gain). Provide a country to see its rank, or leave it blank to see a top list.</p>
+
+      <form class="form" method="get" action="{{ url_for('pages.ranking') }}">
+        <label for="rank_entity">Country</label>
+        <input id="rank_entity" name="entity" type="text" placeholder="e.g., Brazil">
+
+        <label for="rank_year">Year</label>
+        <input id="rank_year" name="year" type="text" inputmode="numeric" placeholder="e.g., 2021">
+
+        <label for="rank_top">Top N</label>
+        <input id="rank_top" name="top" type="text" inputmode="numeric" placeholder="e.g., 10">
+
+        <label for="rank_order">Order</label>
+        <select id="rank_order" name="order">
+          <option value="loss">Largest loss</option>
+          <option value="gain">Largest gain</option>
+        </select>
+
+        <button type="submit" class="btn">Explore ranking</button>
+      </form>
+    </article>
+  </section>
+
+  <section class="section">
+    <h2>Examples</h2>
+    <p>These links demonstrate working routes (HTML and JSON):</p>
+    <ul class="example-list">
+      {% for ex in examples %}
+        <li><a href="{{ ex.href }}">{{ ex.label }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

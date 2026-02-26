@@ -1,89 +1,120 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/w6LgLvZq)
-# CS257-TeamTemplate
-Template for long-term team projects for CS257 Software Design
+# Team Project D – Climate Data Explorer
 
 Group D Team Members: Milly, Simon, Amery
 
-# Team Project D – Command Line Interface (Component 1)
+This repo contains:
 
-This repo contains a Python command-line app that lets you query and explore our
-environmental datasets (Our World in Data CSV exports).
+- `command_line.py` – a command-line interface for querying climate datasets
+- `flask_app.py` – a Flask web app with a user-facing website and a JSON API
+- `ProductionCode/` – the repository + helpers used by both the CLI and Flask app
+- `Tests/` – unit + integration tests for production code, CLI, and Flask routes
 
-Supported features (3 independent CLI features):
+The app queries a PostgreSQL database on stearns via the `records` library.
 
-1. Deforestation / forest change lookup (`--deforestation`)  
-   Look up the *annual change in forest area* for a country in a specific year.
-   If `--year` is omitted, the app defaults to the latest year available for that country.
+## Setup
 
-2. CO₂ per-capita lookup (`--co2`)  
-   Look up *annual CO₂ emissions per capita* for a country in a specific year.
-   If `--year` is omitted, the app defaults to the latest year available for that country.
+Install dependencies:
 
-3. Forest change ranking (`--ranking`)  
-   Rank countries by annual change in forest area (largest loss or largest gain).
+```bash
+python3 -m pip install flask records psycopg2
+```
 
-The CLI includes `-h/--help` usage and an automated `unittest` test suite.
+### Database setup on stearns
 
-## Usage
+The database contains 3 tables:
 
-Run the built-in help:
+- `forest_change` (annual change in forest area, stored as hectares)
+- `co2_per_capita` (annual CO₂ emissions per capita)
+- `countries` (the list of entities we treat as countries)
+
+Expected schema is provided in `Data/schema.sql`.
+
+## Command Line Interface
+
+Run help:
 
 ```bash
 python3 command_line.py -h
 ```
 
-By default, the program reads CSV files from `./Data`. You can override the
-data directory with `--data-dir`.
+Supported CLI features (3 independent features):
 
-### Feature 1: Forest change (deforestation proxy)
+1. Deforestation / forest change lookup (`--deforestation`)
+2. CO₂ per-capita lookup (`--co2`)
+3. Forest change ranking (`--ranking`)
+
+Examples:
 
 ```bash
-# Value lookup (explicit year)
 python3 command_line.py --deforestation Brazil --year 2020
-
-# Value lookup (default year = latest for that country)
-python3 command_line.py --deforestation Brazil
-
-# List/ranking output (no country provided)
-python3 command_line.py --deforestation --year 2020 --top 10
-```
-
-### Feature 2: CO₂ emissions per capita
-
-```bash
-# Value lookup (explicit year)
 python3 command_line.py --co2 Canada --year 2021
-
-# Value lookup (default year = latest for that country)
-python3 command_line.py --co2 Canada
-
-# List output (no country provided)
-python3 command_line.py --co2 --year 2020 --top 10
+python3 command_line.py --ranking Brazil --year 2021 --order loss
+python3 command_line.py --ranking --year 2021 --order gain --top 10
 ```
 
-### Feature 3: Forest change ranking
+Results are restricted to countries only.
+
+
+## Flask App
+
+Run the Flask app:
 
 ```bash
-# Rank for a single country
-python3 command_line.py --ranking Brazil --year 2020
-
-# List the top 10 forest losses in a year
-python3 command_line.py --ranking --year 2020 --order loss --top 10
-
-# List the top 10 forest gains in a year
-python3 command_line.py --ranking --year 2020 --order gain --top 10
+python3 flask_app.py
 ```
 
-### Aggregates vs. Countries
+Then open the URL printed in the terminal.
 
-By default, results are **countries only**. To include aggregates (e.g., *World*,
-*Africa*), add:
+### Website routes (HTML)
 
-```bash
-python3 command_line.py --co2 --year 2020 --top 10 --include-aggregates
-```
+- `/` – homepage with feature forms + example links
+- `/deforestation` – forest change value lookup (or top list)
+- `/co2` – CO₂ per-capita value lookup (or top list)
+- `/ranking` – forest change ranking for a country (or top list)
+- `/about` – usage notes
 
-## Running Tests
+Each feature page supports both:
+
+- Single value / single rank: provide a country (`entity`) and optional `year`
+- Top list: leave `entity` blank and use `year`, `top`, and `order` (where applicable)
+
+### API routes (JSON)
+
+All JSON endpoints are available under `/api`, for example:
+
+- `/api/deforestation/United_States?year=2021`
+- `/api/co2?year=2021&top=3`
+- `/api/ranking/Brazil?year=2021&order=loss`
+
+### Website design: scanning, satisficing, muddling through
+
+- Scanning
+  - Clear page headings and short “lead” descriptions.
+  - Consistent navigation bar on every page.
+  - Tables for ranked lists (easy to skim).
+
+- Satisficing
+  - Sensible defaults:
+    - omit `year` → uses the latest available year
+    - omit `top` → defaults to 10
+  - Example links on the homepage and 404 page.
+
+- Muddling through
+  - Multiple pathways to information:
+    - homepage forms
+    - nav bar links
+    - direct URLs
+  - Helpful 404 page that points to working examples.
+
+### Accessibility
+
+- Skip link (“Skip to main content”)
+- `<label for="...">` + matching `id="..."` on form controls
+- Semantic headings (`h1`/`h2`) and structured content (`dl`, `table`)
+- Responsive layout and relative font sizing (works at 150–200% zoom)
+
+
+## Running tests
 
 From the repo root:
 
@@ -91,75 +122,10 @@ From the repo root:
 python3 -m unittest discover -s Tests -v
 ```
 
-## Data Files
-
-The CLI expects these files to exist in the data directory (default `./Data`):
-
-- `annual-change-forest-area.csv`
-- `co-emissions-per-capita.csv`
-
-## Dependencies
-
-This project uses only the Python standard library.
-
-### Production code
-
-- `argparse` – build the command-line interface and `-h/--help` output
-- `csv` – read the dataset CSV files
-- `dataclasses` – define typed row/result objects
-- `pathlib` – handle filesystem paths for datasets
-- `typing` – type hints for better function design
-- `difflib`, `re`, `unicodedata` – implement forgiving entity-name matching
-- `sys` – print errors to stderr and return non-zero exit codes
-
-### Tests
-
-- `unittest` – automated test framework
-- `contextlib.redirect_stdout / redirect_stderr` and `io.StringIO` – capture CLI output
-- `tempfile` – create temporary CSV files for I/O edge-case tests
-
-No third-party packages are required.
-
-
-# Flask App (Component 2)
-
-This repo also includes a Flask web app in `flask_app.py`.
-
-## Run the Flask app
-
-From the repo root:
+Coverage:
 
 ```bash
-# activate your virtual environment
-# source ~/.venvs/cs257_venv/bin/activate
-
-python3 flask_app.py
-```
-
-Then open the URL shown in the terminal (usually `http://127.0.0.1:5000/`).
-
-The homepage (`/`) includes instructions and working example links.
-
-### Routes (HTML)
-
-- `/deforestation/<entity>` – single forest-change value
-- `/deforestation` – top list (query params: `year`, `top`, `order`)
-- `/co2/<entity>` – single CO₂ per-capita value
-- `/co2` – top emitters list (query params: `year`, `top`)
-- `/ranking/<entity>` – rank for one entity (query params: `year`, `order`)
-- `/ranking` – top list (query params: `year`, `top`, `order`)
-
-Use `include_aggregates=1` to include aggregate entities like `World`.
-
-### API (JSON)
-
-All API endpoints are available under the `/api` prefix, for example:
-
-- `/api/deforestation/United_States?year=2021`
-- `/api/co2?year=2021&top=3`
-
-## Run tests
-
-```bash
-python3 -m unittest discover -s Tests
+python3 -m pip install coverage
+python3 -m coverage run --source ProductionCode,flask_app,command_line -m unittest discover -s Tests
+python3 -m coverage report -m
 ```
