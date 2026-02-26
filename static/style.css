@@ -28,7 +28,7 @@ ul {
     list-style-type: none;
     margin: 0;
     padding: 0;
-    background-color: #000000;
+    background-color: #222;
     display: flex;
     justify-content: flex-start;
     align-items: center;
@@ -37,13 +37,13 @@ ul {
 ul li a {
     display: block;
     color: white;
-    padding: 14px 20px;
+    padding: 10px 20px;
     text-decoration: none;
     transition: background 0.3s ease;
 }
 
 ul li a.active {
-    background: #444;
+    background: #222;
 }
 
 ul li a:hover {
@@ -84,16 +84,17 @@ form select {
 
 form {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 40px;
 }
 
 .hero {
-    background-image: url("https://wallpaperaccess.com/full/1782036.jpg");
+    background-image: url("/static/images/image.png");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 
-    padding: 120px 20px;
+    font-family: 'Nunito', sans-serif;
+    padding: 140px 20px;
     text-align: center;
     color: white;
 }
@@ -104,8 +105,10 @@ form {
 }
 
 .hero p {
+    color: rgba(255, 255, 255, 0.85);
     max-width: 700px;
     margin: 20px auto 0;
     padding: 0 20px;
     font-size: 1.2rem;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
