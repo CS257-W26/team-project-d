@@ -19,7 +19,7 @@ jobs:
       with:
         test-name: Run test suite
         setup-command: python -m pip install --upgrade pip; pip install flask; pip
-          install psycopg2; pip install records; curl -o ProductionCode/psql_config.py
+          install psycopg2; pip install records; pip install matplotlib; curl -o ProductionCode/psql_config.py
           https://anyaevostinar.github.io/classes/257-s25/psql_config.py
         command: python3 -m unittest discover -s Tests
         timeout: 10
@@ -29,8 +29,8 @@ jobs:
       with:
         test-name: Coverage
         setup-command: python -m pip install --upgrade pip; pip install coverage;
-          pip install flask; pip install psycopg2; pip install records; curl -o ProductionCode/psql_config.py
-          https://anyaevostinar.github.io/classes/257-s25/psql_config.py
+          pip install flask; pip install psycopg2; pip install records; pip install
+          matplotlib; curl -o ProductionCode/psql_config.py https://anyaevostinar.github.io/classes/257-s25/psql_config.py
         command: python3 -m coverage run --source ProductionCode,flask_app,command_line
           -m unittest discover Tests; python3 -m coverage report -m
         timeout: 10
