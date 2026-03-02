@@ -41,3 +41,30 @@ so that I can scan trends over time without leaving the page.
 
 ### Acceptance tests
 - `Tests/test_flask_app.py`
+
+## CLI user stories
+
+### US3: Forest change lookup
+As a user,
+I want to query forest change for a country (and optionally a year) from the command line,
+so that I can get a quick numeric result.
+
+#### Acceptance criteria
+- `python3 command_line.py --deforestation "United States" --year 2010` prints a single value and exits 0.
+- If the year is omitted, the CLI defaults to the latest available year for that metric.
+
+#### Acceptance tests
+- `Tests/test_command_line.py`
+
+### US4: CO₂ per-capita lookup
+As a user,
+I want to query CO₂ per-capita for a country (and optionally a year) from the command line,
+so that I can get a quick numeric result.
+
+#### Acceptance criteria
+- `python3 command_line.py --co2 "United States" --year 2010` prints a single value and exits 0.
+- If the year is omitted, the CLI defaults to the latest available year for that metric.
+
+#### Acceptance tests
+- `Tests/test_command_line.py`
+- `Tests/test_flask_app.py`

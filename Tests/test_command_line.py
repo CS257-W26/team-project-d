@@ -1,4 +1,5 @@
 """Unit tests for command_line.py."""
+# pylint: disable=protected-access
 
 from __future__ import annotations
 

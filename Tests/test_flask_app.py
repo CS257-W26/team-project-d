@@ -1,4 +1,5 @@
 """Integration-style tests for flask_app routes and helpers."""
+# pylint: disable=protected-access
 
 from __future__ import annotations
 
