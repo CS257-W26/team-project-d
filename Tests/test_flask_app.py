@@ -1,5 +1,4 @@
 """Integration-style tests for flask_app routes and helpers."""
-# pylint: disable=protected-access
 
 from __future__ import annotations
 
@@ -10,25 +9,36 @@ from unittest.mock import MagicMock
 import flask_app
 
 
-class TestFlaskHelpers(unittest.TestCase):
-    """Tests for small helper functions in flask_app."""
+class TestFlaskRouteFallbacks(unittest.TestCase):
+    """Tests that route behavior covers the small helper cases."""
 
     def setUp(self) -> None:
         self.app = flask_app.create_app(db=MagicMock())
         self.app.testing = True
+        self.repo = MagicMock()
+        self.app.config["REPO"] = self.repo
+        self.client = self.app.test_client()
 
-    def test_helper_functions_handle_defaults_and_invalid_years(self) -> None:
-        """Helpers should normalize entities and fall back for invalid years."""
-        self.assertEqual(flask_app._commas(1200), "1,200")
-        self.assertEqual(flask_app._normalize_entity("United_States"), "United States")
-        self.assertEqual(flask_app._default_entity(["Canada", "Mexico"]), "Canada")
+    def test_country_page_falls_back_for_invalid_entity_and_year(self) -> None:
+        """Invalid query values should fall back to the default country and year."""
+        self.repo.countries.return_value = ["Canada", "United States"]
+        self.repo.common_years_for_country.return_value = [2019, 2020]
+        self.repo.common_latest_year_for_country.return_value = 2020
+        self.repo.snapshot.return_value = {
+            "co2_per_capita": 1.2,
+            "forest_change": 1200.0,
+        }
+        self.repo.series.return_value = [
+            {"year": 2019, "co2_per_capita": 1.0, "forest_change": 1000.0},
+            {"year": 2020, "co2_per_capita": 1.2, "forest_change": 1200.0},
+        ]
 
-        with self.app.test_request_context("/?entity=Brazil&year=oops"):
-            entity = flask_app._selected_entity(["Canada"], "Canada", None)
-            year = flask_app._selected_year([2019, 2020], 2020)
+        response = self.client.get("/country?entity=Brazil&year=oops")
 
-        self.assertEqual(entity, "Canada")
-        self.assertEqual(year, 2020)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"United States", response.data)
+        self.assertIn(b"1,200", response.data)
+        self.assertIn(b"2020", response.data)
 
 
 class TestFlaskHtmlRoutes(unittest.TestCase):
@@ -163,7 +173,6 @@ class TestFlaskApiRoutes(unittest.TestCase):
         response = self.client.get("/api/deforestation/Canada")
 
         self.assertEqual(response.status_code, 404)
-
 
     def test_api_route_uses_safe_country_resolution(self) -> None:
         """API routes should turn repository matching errors into 404s."""

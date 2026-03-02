@@ -1,9 +1,7 @@
 """Unit tests for command_line.py."""
-# pylint: disable=protected-access
 
 from __future__ import annotations
 
-import io
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -13,24 +11,13 @@ import command_line
 class TestCommandLine(unittest.TestCase):
     """Tests for the CLI interface."""
 
-    def test_build_parser_and_helper_functions(self) -> None:
-        """Parser and small helpers should support the CLI contract."""
+    def test_build_parser(self) -> None:
+        """Parser should accept the public CLI arguments."""
         parser = command_line.build_parser()
         args = parser.parse_args(["--co2", "Canada"])
-        repo = MagicMock()
-        repo.resolve_country.return_value = "United States"
-
-        with patch("sys.stderr", new=io.StringIO()) as stderr:
-            error_code = command_line._print_error("boom")
 
         self.assertEqual(args.co2, "Canada")
         self.assertIsNone(args.year)
-        self.assertEqual(
-            command_line._resolve_country(repo, "United_States"),
-            "United States",
-        )
-        self.assertEqual(error_code, 2)
-        self.assertIn("boom", stderr.getvalue())
 
     @patch("command_line.get_db")
     @patch("command_line.ClimateRepository")
@@ -52,7 +39,7 @@ class TestCommandLine(unittest.TestCase):
             )
 
         self.assertEqual(exit_code, 0)
-        repo.resolve_country.assert_called()
+        repo.resolve_country.assert_called_with("United States")
         repo.forest_value.assert_called_with("United States", 2010)
         printed = " ".join(str(call[0][0]) for call in mock_print.call_args_list)
         self.assertIn("United States", printed)
@@ -96,7 +83,6 @@ class TestCommandLine(unittest.TestCase):
 
         self.assertEqual(exit_code, 2)
         mock_print.assert_called()
-
 
     @patch("command_line.get_db")
     @patch("command_line.ClimateRepository")

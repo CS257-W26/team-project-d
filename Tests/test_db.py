@@ -1,5 +1,4 @@
 """Unit tests for ProductionCode.db."""
-# pylint: disable=protected-access
 
 from __future__ import annotations
 
@@ -51,17 +50,26 @@ class TestDbConfig(unittest.TestCase):
 
         self.assertIn("missing required values", str(ctx.exception).lower())
 
-    def test_port_defaults_to_5432_for_invalid_values(self) -> None:
-        """_port() should fall back to the default when the config is invalid."""
-        fake_cfg = types.SimpleNamespace(PORT="not-a-number")
+    def test_get_db_url_defaults_invalid_port_to_5432(self) -> None:
+        """Invalid PORT values should fall back to PostgreSQL's default port."""
+        fake_cfg = types.ModuleType("ProductionCode.psql_config")
+        fake_cfg.DATABASE = "team_db"
+        fake_cfg.USER = "alice"
+        fake_cfg.PASSWORD = "secret"
+        fake_cfg.HOST = "localhost"
+        fake_cfg.PORT = "not-a-number"
 
-        self.assertEqual(db._port(fake_cfg), 5432)
+        with patch.dict(sys.modules, {"ProductionCode.psql_config": fake_cfg}):
+            self.assertEqual(
+                "postgresql://alice:secret@localhost:5432/team_db",
+                db.get_db_url(),
+            )
 
-    def test_import_config_missing_module_raises_runtime_error(self) -> None:
+    def test_get_db_url_missing_config_module_raises_runtime_error(self) -> None:
         """Missing psql_config should raise a clear RuntimeError."""
         with patch("ProductionCode.db._import", side_effect=ModuleNotFoundError):
             with self.assertRaises(RuntimeError) as ctx:
-                db._import_config()
+                db.get_db_url()
 
         self.assertIn("Missing ProductionCode/psql_config.py", str(ctx.exception))
 
