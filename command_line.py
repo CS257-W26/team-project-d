@@ -1,82 +1,101 @@
 """
-Examples:
-    python3 command_line.py deforestation --country "Algeria" --year 2020
-    python3 command_line.py co2 --country "Germany" --year 2020
-    python3 command_line.py ranking --country "Germany" --year 2020
+Command-line interface for querying the climate database.
+
+This CLI supports two user-facing queries:
+
+1. Forest change (ha) for a country and year
+2. CO₂ emissions per capita (t/person) for a country and year
+
+If the year is omitted, the CLI defaults to the latest year available for that
+metric for the chosen country.
 """
+
 from __future__ import annotations
+
 import argparse
 import sys
+from typing import Optional
+
+from ProductionCode.climate_repository import CO2_COLUMN, FOREST_CHANGE_COLUMN, ClimateRepository
+from ProductionCode.db import get_db
+from ProductionCode.output_format import format_single_value
+
+FOREST_UNIT = "ha"
+CO2_UNIT = "t/person"
+
+
+def _add_features(parser: argparse.ArgumentParser) -> None:
+    """add mutually-exclusive feature flags"""
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--deforestation", metavar="COUNTRY", help="Forest change lookup (ha).")
+    group.add_argument("--co2", metavar="COUNTRY", help="CO₂ per-capita lookup (t/person).")
+
+
+def _add_options(parser: argparse.ArgumentParser) -> None:
+    """add shared options used across features"""
+    parser.add_argument("--year", type=int, default=None, help="Year (default: latest).")
+
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="command_line.py")
-    sub = p.add_subparsers(dest="cmd", required=True)
-
-    def add_country_year(sp):
-        sp.add_argument("--country", required=True, help="Country / Entity name (e.g., Algeria)")
-        sp.add_argument("--year", required=True, type=int, help="Year (e.g., 2020)")
-
-    sp1 = sub.add_parser("deforestation", help="Lookup annual forest area change (ha) for a country/year")
-    add_country_year(sp1)
-
-    sp2 = sub.add_parser("co2", help="Lookup CO2 emissions per capita for a country/year")
-    add_country_year(sp2)
-
-    sp3 = sub.add_parser("ranking", help="Get both ranks for a country/year")
-    add_country_year(sp3)
-
-    return p
+    """build and return the CLI argument parser"""
+    parser = argparse.ArgumentParser(prog="command_line.py", description="Query climate datasets.")
+    _add_features(parser)
+    _add_options(parser)
+    return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    from ProductionCode.co2_queries import DataSource
-    ds = DataSource()
+def _resolve_country(repo: ClimateRepository, raw: str) -> Optional[str]:
+    """resolve a user-supplied country string to a canonical database name"""
+    normalized = raw.replace("_", " ").strip()
+    return repo.resolve_country(normalized)
 
-    if args.cmd == "deforestation":
-        rows = ds.query_forest([args.country, str(args.year)])
-        if not rows:
-            print("Not found.")
-            return 1
-        val = next(v for k, v in rows[0].items() if k not in ("entity", "year", "code"))
-        print(f"Deforestation area of {args.country} in {args.year} is {val} ha")
-        return 0
 
-    if args.cmd == "co2":
-        rows = ds.query_co2([args.country, str(args.year)])
-        if not rows:
-            print("Not found.")
-            return 1
-        val = next(v for k, v in rows[0].items() if k not in ("entity", "year", "code"))
-        print(f"CO₂ emissions per capita of {args.country} in {args.year} is {val}")
-        return 0
-
-    if args.cmd == "ranking":
-        # deforestation ascending, co2 descending
-        # to make consistent
-        def_rows = ds.db.query(
-            "SELECT Entity, Annual_Forest_Change FROM forest_change WHERE Year = :y",
-            y=args.year,
-        ).all(as_dict=True)
-        def_vals = [(r["entity"], float(r["annual_forest_change"])) for r in def_rows if r.get("annual_forest_change") is not None]
-        def_vals.sort(key=lambda t: t[1])
-        def_rank = next((i for i, (e, _) in enumerate(def_vals, start=1) if e == args.country), None)
-
-        co2_rows = ds.db.query(
-            "SELECT Entity, co2_per_capita FROM co2 WHERE Year = :y",
-            y=args.year,
-        ).all(as_dict=True)
-        co2_vals = [(r["entity"], float(r["co2_per_capita"])) for r in co2_rows if r.get("co2_per_capita") is not None]
-        co2_vals.sort(key=lambda t: t[1], reverse=True)
-        co2_rank = next((i for i, (e, _) in enumerate(co2_vals, start=1) if e == args.country), None)
-
-        if def_rank is None or co2_rank is None:
-            print("Not found.")
-            return 1
-        print(f"In {args.year}, {args.country} ranks #{def_rank} in deforestation and #{co2_rank} in CO₂ emissions per capita.")
-        return 0
-
+def _print_error(message: str) -> int:
+    """print an error to stderr and return a non-zero exit code"""
+    print(message, file=sys.stderr)
     return 2
+
+
+def _deforestation(repo: ClimateRepository, raw_entity: str, year: Optional[int]) -> tuple[str, int, float]:
+    """get forest change for a country and year (defaulting year if needed)"""
+    entity = _resolve_country(repo, raw_entity)
+    if not entity:
+        raise ValueError("Unknown country")
+    chosen_year = year or repo.forest_latest_year_for_country(entity)
+    value = repo.forest_value(entity, chosen_year)
+    if value is None:
+        raise ValueError("No data for that year")
+    return entity, chosen_year, value
+
+
+def _co2(repo: ClimateRepository, raw_entity: str, year: Optional[int]) -> tuple[str, int, float]:
+    """get CO₂ per-capita for a country and year (defaulting year if needed)"""
+    entity = _resolve_country(repo, raw_entity)
+    if not entity:
+        raise ValueError("Unknown country")
+    chosen_year = year or repo.co2_latest_year_for_country(entity)
+    value = repo.co2_value(entity, chosen_year)
+    if value is None:
+        raise ValueError("No data for that year")
+    return entity, chosen_year, value
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    """run the CLI and return an exit code"""
+    args = build_parser().parse_args(argv)
+    repo = ClimateRepository(get_db())
+
+    try:
+        if args.deforestation:
+            entity, year, value = _deforestation(repo, args.deforestation, args.year)
+            print(format_single_value(entity, year, FOREST_CHANGE_COLUMN, value, FOREST_UNIT))
+            return 0
+
+        entity, year, value = _co2(repo, args.co2, args.year)
+        print(format_single_value(entity, year, CO2_COLUMN, value, CO2_UNIT))
+        return 0
+    except ValueError as exc:
+        return _print_error(f"Error: {exc}")
 
 
 if __name__ == "__main__":

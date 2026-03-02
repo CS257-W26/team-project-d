@@ -1,212 +1,199 @@
+"""
+Flask app providing a user-facing website and a JSON API for climate datasets.
+
+Website structure:
+- Homepage with a country/year form
+- Dashboard page showing two metrics (deforestation & CO2) and a year-by-year table
+- About page
+
+Data is queried from a PostgreSQL database on stearns via the records library.
+"""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
-from flask import Flask, jsonify, render_template, request
+from flask import Blueprint, Flask, abort, current_app, jsonify, render_template, request
 
-def _metric_from_row(row: Dict[str, Any]) -> Tuple[str, Any]:
-    """Extract the non-entity/year metric from a records row dict."""
-    for k, v in row.items():
-        if k not in ("entity", "year", "code"):
-            return k, v
-    return "value", None
+from ProductionCode.climate_repository import ClimateRepository
+from ProductionCode.db import get_db
+
+PROJECT_NAME = "Climate Data Explorer"
+UNITS = {"co2_per_capita": "t/person", "forest_change": "ha"}
+
+api = Blueprint("api", __name__)
 
 
-def _safe_float(x: Any) -> Optional[float]:
+def _commas(value: Any) -> str:
+    """format an integer-like value with thousands separators"""
+    return f"{int(value):,}"
+
+
+def _repo() -> ClimateRepository:
+    """convenience accessor for the repository stored on the app config"""
+    return current_app.config["REPO"]
+
+
+def _normalize_entity(raw: str) -> str:
+    """normalize a user-facing entity string into a DB-friendly name"""
+    return raw.replace("_", " ").strip()
+
+
+def _default_entity(entities: list[str]) -> str:
+    """choose a stable default entity for the UI"""
+    return "United States" if "United States" in entities else entities[0]
+
+
+def _selected_entity(entities: list[str], fallback: str, path_entity: Optional[str]) -> str:
+    """read a valid entity from the path/query string or fall back"""
+    raw = request.args.get("entity") or path_entity or ""
+    normalized = _normalize_entity(raw)
+    return normalized if normalized in entities else fallback
+
+
+def _read_year(default_year: int) -> int:
+    """read an integer year from the query string or return a default"""
+    raw = (request.args.get("year") or "").strip()
+    if not raw:
+        return default_year
     try:
-        return float(x)
-    except Exception:
-        return None
+        return int(raw)
+    except ValueError:
+        return default_year
 
 
-def create_app(db: Optional[object] = None, testing: bool = False) -> Flask:
-    app = Flask(__name__)
-    app.config["TESTING"] = testing
+def _selected_year(valid_years: list[int], fallback: int) -> int:
+    """read a year and ensure it exists in a provided year list"""
+    year = _read_year(fallback)
+    return year if year in valid_years else fallback
 
-    if db is None:
-        from ProductionCode.co2_queries import DataSource  # imported lazily
-        ds = DataSource()
-    else:
-        ds = db
 
-    def get_countries() -> List[str]:
-        # Prefer forest_change list; fall back to co2 if needed.
-        for table in ("forest_change", "co2"):
-            try:
-                rows = ds.db.query(f"SELECT DISTINCT Entity FROM {table} ORDER BY Entity").all(as_dict=True)
-                return [r["entity"] for r in rows if r.get("entity")]
-            except Exception:
-                continue
-        return []
+@api.route("/deforestation/<string:entity>")
+def api_deforestation(entity: str):
+    """return forest change (ha) for a country/year"""
+    repo = _repo()
+    country = repo.resolve_country(_normalize_entity(entity))
+    if not country:
+        abort(404)
+    year = _read_year(repo.forest_latest_year_for_country(country))
+    value = repo.forest_value(country, year)
+    if value is None:
+        abort(404)
+    return jsonify({"entity": country, "year": year, "value": value, "unit": UNITS["forest_change"]})
 
-    @app.get("/")
-    def home():
-        return render_template("homepage.html", title="Carbon & Forests Dashboard")
 
-    @app.get("/about")
-    def about_page():
-        return render_template("about.html", title="About")
+@api.route("/co2/<string:entity>")
+def api_co2(entity: str):
+    """return CO₂ per-capita (t/person) for a country/year"""
+    repo = _repo()
+    country = repo.resolve_country(_normalize_entity(entity))
+    if not country:
+        abort(404)
+    year = _read_year(repo.co2_latest_year_for_country(country))
+    value = repo.co2_value(country, year)
+    if value is None:
+        abort(404)
+    return jsonify({"entity": country, "year": year, "value": value, "unit": UNITS["co2_per_capita"]})
 
-    @app.get("/deforestation")
-    def deforestation_page():
-        country = request.args.get("country")
-        year = request.args.get("year")
-        message = None
 
-        if country or year:
-            if not country or not year:
-                message = "please select a valid country or year"
-            else:
-                try:
-                    rows = ds.query_forest([country, year])
-                    if not rows:
-                        message = "please select a valid country or year"
-                    else:
-                        _, val = _metric_from_row(rows[0])
-                        message = f"Deforestation area of {country} in {int(year)} is {val} ha"
-                except Exception:
-                    message = "please select a valid country or year"
+@api.route("/dashboard/<string:entity>")
+def api_dashboard(entity: str):
+    """return both metrics for a country/year (intersection years only)"""
+    repo = _repo()
+    country = repo.resolve_country(_normalize_entity(entity))
+    if not country:
+        abort(404)
+    years = repo.common_years_for_country(country)
+    year = _selected_year(years, repo.common_latest_year_for_country(country))
+    snapshot = repo.snapshot(country, year)
+    if snapshot is None:
+        abort(404)
+    return jsonify({"entity": country, "year": year, "units": UNITS, **snapshot})
+
+
+def _register_pages(app: Flask) -> None:
+    """register user-facing page routes"""
+
+    @app.route("/")
+    def homepage() -> str:
+        """render the website homepage"""
+        repo = _repo()
+        entities = repo.countries()
+        default_entity = _default_entity(entities)
+        years = repo.common_years() or repo.common_years_for_country(default_entity)
+        return render_template(
+            "index.html",
+            project=PROJECT_NAME,
+            entities=entities,
+            years=years,
+            default_entity=default_entity,
+            default_year=repo.common_latest_year_for_country(default_entity),
+        )
+
+    @app.route("/country")
+    @app.route("/country/<string:entity>")
+    def country_page(entity: Optional[str] = None) -> str:
+        """render the dashboard page for a selected country/year"""
+        repo = _repo()
+        entities = repo.countries()
+        default_entity = _default_entity(entities)
+        chosen_entity = _selected_entity(entities, default_entity, entity)
+        years = repo.common_years_for_country(chosen_entity) or repo.common_years()
+        year = _selected_year(years, repo.common_latest_year_for_country(chosen_entity))
+        snapshot = repo.snapshot(chosen_entity, year)
+        if snapshot is None:
+            abort(404)
 
         return render_template(
-            "deforestation.html",
-            title="Deforestation lookup",
-            countries=get_countries(),
-            country=country,
+            "country.html",
+            project=PROJECT_NAME,
+            entity=chosen_entity,
             year=year,
-            message=message,
+            entities=entities,
+            years=years,
+            units=UNITS,
+            snapshot=snapshot,
+            series=repo.series(chosen_entity),
         )
 
-    @app.get("/co2")
-    def co2_page():
-        country = request.args.get("country")
-        year = request.args.get("year")
-        message = None
+    @app.route("/about")
+    def about_page() -> str:
+        """render a short page describing the project"""
+        repo = _repo()
+        entities = repo.countries()
+        default_entity = _default_entity(entities)
+        years = repo.common_years() or repo.common_years_for_country(default_entity)
+        return render_template("about.html", project=PROJECT_NAME, entities=entities, years=years)
 
-        if country or year:
-            if not country or not year:
-                message = "please select a valid country or year"
-            else:
-                try:
-                    rows = ds.query_co2([country, year])
-                    if not rows:
-                        message = "please select a valid country or year"
-                    else:
-                        _, val = _metric_from_row(rows[0])
-                        message = f"CO₂ emissions per capita of {country} in {int(year)} is {val}"
-                except Exception:
-                    message = "please select a valid country or year"
 
-        return render_template(
-            "co2.html",
-            title="CO₂ lookup",
-            countries=get_countries(),
-            country=country,
-            year=year,
-            message=message,
-        )
+def _register_error_handlers(app: Flask) -> None:
+    """register error handlers for common user mistakes"""
 
-    def _rank_country(country: str, year: int) -> Tuple[Optional[int], Optional[int]]:
-        def_rows = ds.db.query(
-            "SELECT Entity, Annual_Forest_Change FROM forest_change WHERE Year = :y",
-            y=year,
-        ).all(as_dict=True)
-        def_vals = [(r["entity"], _safe_float(r.get("annual_forest_change"))) for r in def_rows]
-        def_vals = [(e, v) for e, v in def_vals if v is not None]
-        def_vals.sort(key=lambda t: t[1])
-        def_rank = None
-        for i, (e, _) in enumerate(def_vals, start=1):
-            if e == country:
-                def_rank = i
-                break
-
-        co2_rows = ds.db.query(
-            "SELECT Entity, co2_per_capita FROM co2 WHERE Year = :y",
-            y=year,
-        ).all(as_dict=True)
-        co2_vals = [(r["entity"], _safe_float(r.get("co2_per_capita"))) for r in co2_rows]
-        co2_vals = [(e, v) for e, v in co2_vals if v is not None]
-        co2_vals.sort(key=lambda t: t[1], reverse=True)
-        co2_rank = None
-        for i, (e, _) in enumerate(co2_vals, start=1):
-            if e == country:
-                co2_rank = i
-                break
-
-        return def_rank, co2_rank
-
-    @app.get("/ranking")
-    def ranking_page():
-        country = request.args.get("country")
-        year_raw = request.args.get("year")
-        message = None
-
-        if country or year_raw:
-            if not country or not year_raw:
-                message = "please select a valid country or year"
-            else:
-                try:
-                    year = int(year_raw)
-                    def_rank, co2_rank = _rank_country(country, year)
-                    if def_rank is None or co2_rank is None:
-                        message = "please select a valid country or year"
-                    else:
-                        message = f"In {year}, {country} ranks #{def_rank} in deforestation and #{co2_rank} in CO₂ emissions per capita."
-                except Exception:
-                    message = "please select a valid country or year"
-
-        return render_template(
-            "ranking.html",
-            title="Ranking",
-            countries=get_countries(),
-            country=country,
-            year=year_raw,
-            message=message,
-        )
-
-    @app.get("/api/deforestation")
-    def api_deforestation():
-        country = request.args.get("country")
-        year = request.args.get("year")
-        if not country or not year:
-            return jsonify({"error": "country and year are required"}), 400
-        rows = ds.query_forest([country, year])
-        if not rows:
-            return jsonify({"error": "not found"}), 404
-        _, val = _metric_from_row(rows[0])
-        return jsonify({"country": country, "year": int(year), "deforestation_ha": val})
-
-    @app.get("/api/co2")
-    def api_co2():
-        country = request.args.get("country")
-        year = request.args.get("year")
-        if not country or not year:
-            return jsonify({"error": "country and year are required"}), 400
-        rows = ds.query_co2([country, year])
-        if not rows:
-            return jsonify({"error": "not found"}), 404
-        _, val = _metric_from_row(rows[0])
-        return jsonify({"country": country, "year": int(year), "co2_per_capita": val})
-
-    @app.get("/api/ranking")
-    def api_ranking():
-        country = request.args.get("country")
-        year_raw = request.args.get("year")
-        if not country or not year_raw:
-            return jsonify({"error": "country and year are required"}), 400
-        year = int(year_raw)
-        def_rank, co2_rank = _rank_country(country, year)
-        if def_rank is None or co2_rank is None:
-            return jsonify({"error": "not found"}), 404
-        return jsonify({"country": country, "year": year, "deforestation_rank": def_rank, "co2_rank": co2_rank})
-
-    # Custom 404
     @app.errorhandler(404)
-    def page_not_found(e):
-        return render_template("404.html", title="Page not found"), 404
+    def not_found(_error):
+        """render a helpful 404 page"""
+        repo = app.config.get("REPO")
+        example = None
+        if isinstance(repo, ClimateRepository):
+            entities = repo.countries()
+            if entities:
+                entity = _default_entity(entities)
+                year = repo.common_latest_year_for_country(entity)
+                encoded = entity.replace(" ", "%20")
+                example = f"/country?entity={encoded}&year={year}"
+        return render_template("404.html", project=PROJECT_NAME, path=request.path, example=example), 404
 
+
+def create_app(db=None) -> Flask:
+    """application factory used by tests and production"""
+    app = Flask(__name__)
+    app.config["REPO"] = ClimateRepository(db if db is not None else get_db())
+    app.jinja_env.filters["commas"] = _commas
+    app.register_blueprint(api, url_prefix="/api")
+    _register_pages(app)
+    _register_error_handlers(app)
     return app
 
 
 if __name__ == "__main__":
-    create_app().run(host="0.0.0.0", port=5110, debug=True)
+    create_app().run()

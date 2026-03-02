@@ -1,73 +1,64 @@
-# User Stories (Command Line Component)
+# User Stories
 
-This file lists the user stories supported by `command_line.py` and points to the
-acceptance tests in `Tests/test_command_line.py`.
+This file lists the user stories supported by our project and points to the acceptance tests.
 
-## User Story 1: Forest change (deforestation proxy) value lookup
+## Website user stories
 
-**As a user**, I want to know the annual change in forest area for a specific
-country in a specific year, so that I can understand forest loss or gain.
+### US1: Country dashboard (two metrics)
 
-- CLI feature: `--deforestation COUNTRY`
-- Optional arguments:
-  - `--year YEAR` (if omitted, default to the latest year available for that country)
-  - `--include-aggregates` (include regions/aggregates instead of only countries)
-  - `--data-dir PATH` (custom data directory)
+As a user interested in sustainability and climate impacts,  
+I want to choose a country and year and see both CO₂ per-capita and annual forest change,  
+so that I can quickly compare two indicators for the same place and time.
 
-Acceptance tests:
-- `TestCommandLineAcceptance.test_cli_deforestation_value`
-- `TestCommandLineAcceptance.test_cli_deforestation_default_year`
+Acceptance criteria
+- Given a valid country and year, when I open `/country?entity=<country>&year=<year>`, the page shows:
+  - the selected country and year
+  - a CO₂ per-capita value
+  - a forest-change value
+- Given a valid country but no year, the dashboard defaults to the latest year with data.
 
-## User Story 2: CO₂ emissions per capita value lookup
-
-**As a user**, I want to know the annual CO₂ emissions per capita for a specific
-country in a specific year, so that I can compare countries over time.
-
-- CLI feature: `--co2 COUNTRY`
-- Optional arguments:
-  - `--year YEAR` (if omitted, default to the latest year available for that country)
-  - `--include-aggregates` (include regions/aggregates instead of only countries)
-  - `--data-dir PATH` (custom data directory)
-
-Acceptance tests:
-- `TestCommandLineAcceptance.test_cli_co2_value`
-- `TestCommandLineAcceptance.test_cli_co2_default_year`
-
-## User Story 3: Forest change ranking
-
-**As a user**, I want to see how a country ranks compared to others for forest
-change in a given year, so that I can quickly understand whether it is among the
-largest losses or gains.
-
-- CLI feature: `--ranking COUNTRY`
-- Optional arguments:
-  - `--year YEAR` (defaults to the latest year available for that country)
-  - `--order loss|gain` (rank by largest losses or largest gains)
-  - `--include-aggregates` (include regions/aggregates instead of only countries)
-  - `--data-dir PATH` (custom data directory)
-
-Acceptance tests:
-- `TestCommandLineAcceptance.test_cli_ranking_for_country`
-- `TestCommandLineAcceptance.test_cli_list_outputs` (lists top entries when no country is provided)
+Acceptance tests
+- `Tests/test_flask_app.py` (HTML route tests)
 
 
-# User Stories (Flask Component)
+### US2: Trend scanning (year-by-year table)
 
-The Flask app (`flask_app.py`) supports the same user stories as the CLI.
+As a user,  
+I want to see a year-by-year table for the selected country,  
+so that I can scan trends over time without leaving the page.
 
-## User Story 1 (Web): Forest change value + list
+Acceptance criteria
+- The dashboard includes a table with multiple years for the selected country.
+- The selected year is visually highlighted in the table.
 
-- Single value: `/deforestation/<entity>?year=YYYY`
-- List output: `/deforestation?year=YYYY&top=N&order=loss|gain`
+Acceptance tests
+- `Tests/test_flask_app.py` (HTML route tests)
 
-## User Story 2 (Web): CO₂ per-capita value + list
+## CLI user stories
 
-- Single value: `/co2/<entity>?year=YYYY`
-- List output: `/co2?year=YYYY&top=N`
+### US3: Forest change lookup
 
-## User Story 3 (Web): Forest change ranking
+As a user,  
+I want to query forest change for a country (and optionally a year) from the command line,  
+so that I can get a quick numeric result.
 
-- Single entity rank: `/ranking/<entity>?year=YYYY&order=loss|gain`
-- List output: `/ranking?year=YYYY&top=N&order=loss|gain`
+Acceptance criteria
+- `python3 command_line.py --deforestation "United States" --year 2010` prints a single value and exits 0.
+- If the year is omitted, the CLI defaults to the latest available year for that metric.
 
-Use `include_aggregates=1` to include aggregates like `World`.
+Acceptance tests
+- `Tests/test_command_line.py`
+
+
+### US4: CO₂ per-capita lookup
+
+As a user,  
+I want to query CO₂ per-capita for a country (and optionally a year) from the command line,  
+so that I can get a quick numeric result.
+
+Acceptance criteria
+- `python3 command_line.py --co2 "United States" --year 2010` prints a single value and exits 0.
+- If the year is omitted, the CLI defaults to the latest available year for that metric.
+
+Acceptance tests
+- `Tests/test_command_line.py`

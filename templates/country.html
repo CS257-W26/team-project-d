@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard • {{ entity }} • {{ project }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <h1>{{ entity }} — {{ year }}</h1>
+    <p class="lead">Database-backed metrics for the selected country and year.</p>
+  </header>
+
+  <section class="metric-grid" aria-label="Key metrics">
+    <article class="metric">
+      <h2 class="h3">CO₂ per capita</h2>
+      <p class="metric-value">
+        {{ "%.1f"|format(snapshot.co2_per_capita) }}
+        <span class="unit">{{ units.co2_per_capita }}</span>
+      </p>
+      <p class="small muted">Higher means more emissions per person.</p>
+    </article>
+
+    <article class="metric">
+      <h2 class="h3">Forest change</h2>
+      <p class="metric-value">
+        {{ snapshot.forest_change|commas }}
+        <span class="unit">{{ units.forest_change }}</span>
+      </p>
+      <p class="small muted">Negative values indicate net loss.</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2 class="h3">Year-by-year</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <caption>Historical values for {{ entity }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Year</th>
+            <th scope="col">CO₂ per capita ({{ units.co2_per_capita }})</th>
+            <th scope="col">Forest change ({{ units.forest_change }})</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in series %}
+            <tr {% if row.year == year %}class="is-selected"{% endif %}>
+              <th scope="row">{{ row.year }}</th>
+              <td>{{ "%.1f"|format(row.co2_per_capita) }}</td>
+              <td>{{ row.forest_change|commas }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 class="h3">Try another selection</h2>
+    <form class="form form-inline" action="{{ url_for('country_page') }}" method="get">
+      <div class="form-row">
+        <label for="entity2">Country</label>
+        <select id="entity2" name="entity" required>
+          {% for e in entities %}
+            <option value="{{ e }}" {% if e == entity %}selected{% endif %}>
+              {{ e }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="year2">Year</label>
+        <select id="year2" name="year" required>
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>
+              {{ y }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button class="button" type="submit">Update</button>
+    </form>
+  </section>
+{% endblock %}

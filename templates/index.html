@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Home • {{ project }}{% endblock %}
+
+{% block content %}
+  <section class="hero" aria-labelledby="page-title">
+    <div class="hero-text">
+      <h1 id="page-title">Explore climate signals, fast.</h1>
+      <p class="lead">
+        A database-backed website demo with accessible design and real climate data.
+      </p>
+    </div>
+
+    <div class="hero-card">
+      <h2 class="h3">Pick a country and year</h2>
+      <form class="form" action="{{ url_for('country_page') }}" method="get">
+        <div class="form-row">
+          <label for="entity">Country</label>
+          <select id="entity" name="entity" required>
+            {% for e in entities %}
+              <option
+                value="{{ e }}"
+                {% if e == default_entity %}selected{% endif %}
+              >
+                {{ e }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="year">Year</label>
+          <select id="year" name="year" required>
+            {% for y in years %}
+              <option
+                value="{{ y }}"
+                {% if y == default_year %}selected{% endif %}
+              >
+                {{ y }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button class="button" type="submit">View dashboard</button>
+      </form>
+
+      <p class="small muted">
+        Form labels are connected via matching <code>for</code>/<code>id</code>.
+      </p>
+    </div>
+  </section>
+
+  <section class="grid" aria-label="What you can do">
+    <article class="card">
+      <h2 class="h3">Scan</h2>
+      <p>Use the dashboard cards to read the key numbers at a glance.</p>
+    </article>
+
+    <article class="card">
+      <h2 class="h3">Compare</h2>
+      <p>The table shows year-by-year values for the same country.</p>
+    </article>
+
+    <article class="card">
+      <h2 class="h3">Learn</h2>
+      <p>Visit About for the mock dataset scope and design decisions.</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2 class="h3">Available countries (mock)</h2>
+    <ul class="pill-list">
+      {% for e in entities %}
+        <li class="pill">{{ e }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

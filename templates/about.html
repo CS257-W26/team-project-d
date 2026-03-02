@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}About • {{ project }}{% endblock %}
+
+{% block content %}
+  <header class="page-header">
+    <h1>About this site</h1>
+    <p class="lead">
+      A database-driven Flask website for exploring two climate indicators by country and year.
+    </p>
+  </header>
+
+  <section class="grid" aria-label="Design notes">
+    <article class="card">
+      <h2 class="h3">Data source</h2>
+      <p>
+        Values are queried from our team PostgreSQL database on stearns using the
+        <code>records</code> library. The dashboard combines two datasets:
+        CO₂ emissions per capita and annual change in forest area.
+      </p>
+    </article>
+
+    <article class="card">
+      <h2 class="h3">Accessibility</h2>
+      <p>
+        Forms use matching <code>label for</code> and <code>id</code>, headings
+        structure each page, and focus styles support keyboard navigation.
+      </p>
+    </article>
+
+    <article class="card">
+      <h2 class="h3">How to use</h2>
+      <p>
+        Start on the homepage, choose a country and year, then view the dashboard.
+        The dashboard also includes a year-by-year table so you can scan trends quickly.
+      </p>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2 class="h3">Coverage</h2>
+    <p>
+      The database currently includes {{ entities|length }} countries and {{ years|length }}
+      years where both metrics are available.
+    </p>
+    <ul class="pill-list">
+      {% for e in entities %}
+        <li class="pill">{{ e }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}
