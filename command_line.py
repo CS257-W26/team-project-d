@@ -16,7 +16,11 @@ import argparse
 import sys
 from typing import Optional
 
-from ProductionCode.climate_repository import CO2_COLUMN, FOREST_CHANGE_COLUMN, ClimateRepository
+from ProductionCode.climate_repository import (
+    CO2_COLUMN,
+    FOREST_CHANGE_COLUMN,
+    ClimateRepository,
+)
 from ProductionCode.db import get_db
 from ProductionCode.output_format import format_single_value
 
@@ -27,8 +31,16 @@ CO2_UNIT = "t/person"
 def _add_features(parser: argparse.ArgumentParser) -> None:
     """add mutually-exclusive feature flags"""
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--deforestation", metavar="COUNTRY", help="Forest change lookup (ha).")
-    group.add_argument("--co2", metavar="COUNTRY", help="CO₂ per-capita lookup (t/person).")
+    group.add_argument(
+        "--deforestation",
+        metavar="COUNTRY",
+        help="Forest change lookup (ha).",
+    )
+    group.add_argument(
+        "--co2",
+        metavar="COUNTRY",
+        help="CO₂ per-capita lookup (t/person).",
+    )
 
 
 def _add_options(parser: argparse.ArgumentParser) -> None:
@@ -38,7 +50,10 @@ def _add_options(parser: argparse.ArgumentParser) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """build and return the CLI argument parser"""
-    parser = argparse.ArgumentParser(prog="command_line.py", description="Query climate datasets.")
+    parser = argparse.ArgumentParser(
+        prog="command_line.py",
+        description="Query climate datasets.",
+    )
     _add_features(parser)
     _add_options(parser)
     return parser
@@ -56,7 +71,11 @@ def _print_error(message: str) -> int:
     return 2
 
 
-def _deforestation(repo: ClimateRepository, raw_entity: str, year: Optional[int]) -> tuple[str, int, float]:
+def _deforestation(
+    repo: ClimateRepository,
+    raw_entity: str,
+    year: Optional[int],
+) -> tuple[str, int, float]:
     """get forest change for a country and year (defaulting year if needed)"""
     entity = _resolve_country(repo, raw_entity)
     if not entity:
@@ -68,7 +87,11 @@ def _deforestation(repo: ClimateRepository, raw_entity: str, year: Optional[int]
     return entity, chosen_year, value
 
 
-def _co2(repo: ClimateRepository, raw_entity: str, year: Optional[int]) -> tuple[str, int, float]:
+def _co2(
+    repo: ClimateRepository,
+    raw_entity: str,
+    year: Optional[int],
+) -> tuple[str, int, float]:
     """get CO₂ per-capita for a country and year (defaulting year if needed)"""
     entity = _resolve_country(repo, raw_entity)
     if not entity:
@@ -87,12 +110,32 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     try:
         if args.deforestation:
-            entity, year, value = _deforestation(repo, args.deforestation, args.year)
-            print(format_single_value(entity, year, FOREST_CHANGE_COLUMN, value, FOREST_UNIT))
+            entity, year, value = _deforestation(
+                repo,
+                args.deforestation,
+                args.year,
+            )
+            print(
+                format_single_value(
+                    entity,
+                    year,
+                    FOREST_CHANGE_COLUMN,
+                    value,
+                    FOREST_UNIT,
+                )
+            )
             return 0
 
         entity, year, value = _co2(repo, args.co2, args.year)
-        print(format_single_value(entity, year, CO2_COLUMN, value, CO2_UNIT))
+        print(
+            format_single_value(
+                entity,
+                year,
+                CO2_COLUMN,
+                value,
+                CO2_UNIT,
+            )
+        )
         return 0
     except ValueError as exc:
         return _print_error(f"Error: {exc}")

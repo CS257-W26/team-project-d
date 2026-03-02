@@ -13,7 +13,15 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from flask import Blueprint, Flask, abort, current_app, jsonify, render_template, request
+from flask import (
+    Blueprint,
+    Flask,
+    abort,
+    current_app,
+    jsonify,
+    render_template,
+    request,
+)
 
 from ProductionCode.climate_repository import ClimateRepository
 from ProductionCode.db import get_db
@@ -39,12 +47,24 @@ def _normalize_entity(raw: str) -> str:
     return raw.replace("_", " ").strip()
 
 
+def _resolve_country(repo: ClimateRepository, raw: str) -> Optional[str]:
+    """resolve a country name from a route parameter without leaking errors"""
+    try:
+        return repo.resolve_country(_normalize_entity(raw))
+    except ValueError:
+        return None
+
+
 def _default_entity(entities: list[str]) -> str:
     """choose a stable default entity for the UI"""
     return "United States" if "United States" in entities else entities[0]
 
 
-def _selected_entity(entities: list[str], fallback: str, path_entity: Optional[str]) -> str:
+def _selected_entity(
+    entities: list[str],
+    fallback: str,
+    path_entity: Optional[str],
+) -> str:
     """read a valid entity from the path/query string or fall back"""
     raw = request.args.get("entity") or path_entity or ""
     normalized = _normalize_entity(raw)
@@ -72,35 +92,49 @@ def _selected_year(valid_years: list[int], fallback: int) -> int:
 def api_deforestation(entity: str):
     """return forest change (ha) for a country/year"""
     repo = _repo()
-    country = repo.resolve_country(_normalize_entity(entity))
+    country = _resolve_country(repo, entity)
     if not country:
         abort(404)
     year = _read_year(repo.forest_latest_year_for_country(country))
     value = repo.forest_value(country, year)
     if value is None:
         abort(404)
-    return jsonify({"entity": country, "year": year, "value": value, "unit": UNITS["forest_change"]})
+    return jsonify(
+        {
+            "entity": country,
+            "year": year,
+            "value": value,
+            "unit": UNITS["forest_change"],
+        }
+    )
 
 
 @api.route("/co2/<string:entity>")
 def api_co2(entity: str):
     """return CO₂ per-capita (t/person) for a country/year"""
     repo = _repo()
-    country = repo.resolve_country(_normalize_entity(entity))
+    country = _resolve_country(repo, entity)
     if not country:
         abort(404)
     year = _read_year(repo.co2_latest_year_for_country(country))
     value = repo.co2_value(country, year)
     if value is None:
         abort(404)
-    return jsonify({"entity": country, "year": year, "value": value, "unit": UNITS["co2_per_capita"]})
+    return jsonify(
+        {
+            "entity": country,
+            "year": year,
+            "value": value,
+            "unit": UNITS["co2_per_capita"],
+        }
+    )
 
 
 @api.route("/dashboard/<string:entity>")
 def api_dashboard(entity: str):
     """return both metrics for a country/year (intersection years only)"""
     repo = _repo()
-    country = repo.resolve_country(_normalize_entity(entity))
+    country = _resolve_country(repo, entity)
     if not country:
         abort(404)
     years = repo.common_years_for_country(country)
@@ -108,7 +142,14 @@ def api_dashboard(entity: str):
     snapshot = repo.snapshot(country, year)
     if snapshot is None:
         abort(404)
-    return jsonify({"entity": country, "year": year, "units": UNITS, **snapshot})
+    return jsonify(
+        {
+            "entity": country,
+            "year": year,
+            "units": UNITS,
+            **snapshot,
+        }
+    )
 
 
 def _register_pages(app: Flask) -> None:
@@ -163,7 +204,12 @@ def _register_pages(app: Flask) -> None:
         entities = repo.countries()
         default_entity = _default_entity(entities)
         years = repo.common_years() or repo.common_years_for_country(default_entity)
-        return render_template("about.html", project=PROJECT_NAME, entities=entities, years=years)
+        return render_template(
+            "about.html",
+            project=PROJECT_NAME,
+            entities=entities,
+            years=years,
+        )
 
 
 def _register_error_handlers(app: Flask) -> None:
@@ -181,7 +227,15 @@ def _register_error_handlers(app: Flask) -> None:
                 year = repo.common_latest_year_for_country(entity)
                 encoded = entity.replace(" ", "%20")
                 example = f"/country?entity={encoded}&year={year}"
-        return render_template("404.html", project=PROJECT_NAME, path=request.path, example=example), 404
+        return (
+            render_template(
+                "404.html",
+                project=PROJECT_NAME,
+                path=request.path,
+                example=example,
+            ),
+            404,
+        )
 
 
 def create_app(db=None) -> Flask:

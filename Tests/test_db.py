@@ -1,6 +1,4 @@
-"""
-Unit tests for ProductionCode.db
-"""
+"""Unit tests for ProductionCode.db."""
 
 from __future__ import annotations
 
@@ -14,10 +12,10 @@ from ProductionCode import db
 
 
 class TestDbConfig(unittest.TestCase):
-    """tests for connection-string building and config parsing"""
+    """Tests for connection-string building and config parsing."""
 
     def test_get_db_url_prefers_environment_variable(self) -> None:
-        """if DATABASE_URL is set, it should be returned verbatim"""
+        """If DATABASE_URL is set, it should be returned verbatim."""
         os.environ["DATABASE_URL"] = "postgresql://example"
         try:
             self.assertEqual("postgresql://example", db.get_db_url())
@@ -25,7 +23,7 @@ class TestDbConfig(unittest.TestCase):
             os.environ.pop("DATABASE_URL", None)
 
     def test_get_db_url_supports_multiple_variable_names(self) -> None:
-        """config can use DATABASE/USER/PASSWORD/HOST/PORT variable names"""
+        """Config can use DATABASE/USER/PASSWORD/HOST/PORT variable names."""
         fake_cfg = types.ModuleType("ProductionCode.psql_config")
         fake_cfg.DATABASE = "team_db"
         fake_cfg.USER = "alice"
@@ -40,7 +38,7 @@ class TestDbConfig(unittest.TestCase):
             )
 
     def test_get_db_url_missing_values_raises(self) -> None:
-        """missing required values in psql_config should raise a helpful error"""
+        """Missing required values in psql_config should raise a helpful error."""
         fake_cfg = types.ModuleType("ProductionCode.psql_config")
         fake_cfg.DATABASE = "team_db"
         fake_cfg.USER = "alice"
@@ -52,8 +50,22 @@ class TestDbConfig(unittest.TestCase):
 
         self.assertIn("missing required values", str(ctx.exception).lower())
 
+    def test_port_defaults_to_5432_for_invalid_values(self) -> None:
+        """_port() should fall back to the default when the config is invalid."""
+        fake_cfg = types.SimpleNamespace(PORT="not-a-number")
+
+        self.assertEqual(db._port(fake_cfg), 5432)
+
+    def test_import_config_missing_module_raises_runtime_error(self) -> None:
+        """Missing psql_config should raise a clear RuntimeError."""
+        with patch("ProductionCode.db._import", side_effect=ModuleNotFoundError):
+            with self.assertRaises(RuntimeError) as ctx:
+                db._import_config()
+
+        self.assertIn("Missing ProductionCode/psql_config.py", str(ctx.exception))
+
     def test_get_db_calls_records_database(self) -> None:
-        """get_db() should construct a records.Database instance with the url"""
+        """get_db() should construct a records.Database instance with the URL."""
         fake_records = types.SimpleNamespace(Database=MagicMock())
 
         with patch.dict(sys.modules, {"records": fake_records}):
@@ -61,6 +73,17 @@ class TestDbConfig(unittest.TestCase):
                 _ = db.get_db()
 
         fake_records.Database.assert_called_once_with("postgresql://u:p@h:5432/d")
+
+    def test_get_db_wraps_connection_errors(self) -> None:
+        """get_db() should wrap low-level connection failures in RuntimeError."""
+        fake_records = types.SimpleNamespace(Database=MagicMock(side_effect=Exception("boom")))
+
+        with patch("ProductionCode.db._import", return_value=fake_records):
+            with patch("ProductionCode.db.get_db_url", return_value="postgresql://u:p@h:5432/d"):
+                with self.assertRaises(RuntimeError) as ctx:
+                    db.get_db()
+
+        self.assertIn("Failed to connect to database", str(ctx.exception))
 
 
 if __name__ == "__main__":
