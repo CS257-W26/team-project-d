@@ -11,7 +11,7 @@ Data is queried from a PostgreSQL database on stearns via the records library.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from flask import (
     Blueprint,
@@ -88,15 +88,25 @@ def _selected_year(valid_years: list[int], fallback: int) -> int:
     return year if year in valid_years else fallback
 
 
-@api.route("/deforestation/<string:entity>")
-def api_deforestation(entity: str):
-    """return forest change (ha) for a country/year"""
+def _api_country(entity: str) -> tuple[ClimateRepository, str]:
+    """resolve an API route parameter to a valid country or raise 404"""
     repo = _repo()
     country = _resolve_country(repo, entity)
     if not country:
         abort(404)
-    year = _read_year(repo.forest_latest_year_for_country(country))
-    value = repo.forest_value(country, year)
+    return repo, country
+
+
+def _api_metric_response(
+    entity: str,
+    latest_year_for_country: Callable[[str], int],
+    value_for_year: Callable[[str, int], Optional[float]],
+    unit_key: str,
+):
+    """return a JSON response for a single-metric API route"""
+    _repo_unused, country = _api_country(entity)
+    year = _read_year(latest_year_for_country(country))
+    value = value_for_year(country, year)
     if value is None:
         abort(404)
     return jsonify(
@@ -104,39 +114,14 @@ def api_deforestation(entity: str):
             "entity": country,
             "year": year,
             "value": value,
-            "unit": UNITS["forest_change"],
+            "unit": UNITS[unit_key],
         }
     )
 
 
-@api.route("/co2/<string:entity>")
-def api_co2(entity: str):
-    """return CO₂ per-capita (t/person) for a country/year"""
-    repo = _repo()
-    country = _resolve_country(repo, entity)
-    if not country:
-        abort(404)
-    year = _read_year(repo.co2_latest_year_for_country(country))
-    value = repo.co2_value(country, year)
-    if value is None:
-        abort(404)
-    return jsonify(
-        {
-            "entity": country,
-            "year": year,
-            "value": value,
-            "unit": UNITS["co2_per_capita"],
-        }
-    )
-
-
-@api.route("/dashboard/<string:entity>")
-def api_dashboard(entity: str):
-    """return both metrics for a country/year (intersection years only)"""
-    repo = _repo()
-    country = _resolve_country(repo, entity)
-    if not country:
-        abort(404)
+def _api_dashboard_response(entity: str):
+    """return a JSON response for the dashboard API route"""
+    repo, country = _api_country(entity)
     years = repo.common_years_for_country(country)
     year = _selected_year(years, repo.common_latest_year_for_country(country))
     snapshot = repo.snapshot(country, year)
@@ -150,6 +135,36 @@ def api_dashboard(entity: str):
             **snapshot,
         }
     )
+
+
+@api.route("/deforestation/<string:entity>")
+def api_deforestation(entity: str):
+    """return forest change (ha) for a country/year"""
+    repo = _repo()
+    return _api_metric_response(
+        entity,
+        repo.forest_latest_year_for_country,
+        repo.forest_value,
+        "forest_change",
+    )
+
+
+@api.route("/co2/<string:entity>")
+def api_co2(entity: str):
+    """return CO₂ per-capita (t/person) for a country/year"""
+    repo = _repo()
+    return _api_metric_response(
+        entity,
+        repo.co2_latest_year_for_country,
+        repo.co2_value,
+        "co2_per_capita",
+    )
+
+
+@api.route("/dashboard/<string:entity>")
+def api_dashboard(entity: str):
+    """return both metrics for a country/year (intersection years only)"""
+    return _api_dashboard_response(entity)
 
 
 def _register_pages(app: Flask) -> None:
