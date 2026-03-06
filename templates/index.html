@@ -7,7 +7,7 @@
     <div class="hero-text">
       <h1 id="page-title">Explore climate signals, fast.</h1>
       <p class="lead">
-        A database-backed website demo with accessible design and real climate data.
+        A simple way to explore two climate indicators by country and year.
       </p>
     </div>
 
@@ -44,10 +44,6 @@
 
         <button class="button" type="submit">View dashboard</button>
       </form>
-
-      <p class="small muted">
-        Form labels are connected via matching <code>for</code>/<code>id</code>.
-      </p>
     </div>
   </section>
 
@@ -64,16 +60,7 @@
 
     <article class="card">
       <h2 class="h3">Learn</h2>
-      <p>Visit About for the dataset scope and design decisions.</p>
+      <p>Visit About for the sources behind the dashboard.</p>
     </article>
-  </section>
-
-  <section class="card">
-    <h2 class="h3">Available countries</h2>
-    <ul class="pill-list">
-      {% for e in entities %}
-        <li class="pill">{{ e }}</li>
-      {% endfor %}
-    </ul>
   </section>
 {% endblock %}

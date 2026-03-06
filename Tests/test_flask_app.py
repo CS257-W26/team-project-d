@@ -19,26 +19,24 @@ class TestFlaskRouteFallbacks(unittest.TestCase):
         self.app.config["REPO"] = self.repo
         self.client = self.app.test_client()
 
-    def test_country_page_falls_back_for_invalid_entity_and_year(self) -> None:
-        """Invalid query values should fall back to the default country and year."""
+    def test_country_page_rejects_invalid_entity_and_year(self) -> None:
+        """Invalid dashboard query values should return the custom 404 page."""
         self.repo.countries.return_value = ["Canada", "United States"]
         self.repo.common_years_for_country.return_value = [2019, 2020]
         self.repo.common_latest_year_for_country.return_value = 2020
-        self.repo.snapshot.return_value = {
-            "co2_per_capita": 1.2,
-            "forest_change": 1200.0,
-        }
-        self.repo.series.return_value = [
-            {"year": 2019, "co2_per_capita": 1.0, "forest_change": 1000.0},
-            {"year": 2020, "co2_per_capita": 1.2, "forest_change": 1200.0},
-        ]
 
         response = self.client.get("/country?entity=Brazil&year=oops")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"United States", response.data)
-        self.assertIn(b"1,200", response.data)
-        self.assertIn(b"2020", response.data)
+        self.assertEqual(response.status_code, 404)
+        self.assertIn(b"Page not found", response.data)
+
+    def test_country_page_rejects_unknown_query_args(self) -> None:
+        """Unexpected dashboard query arguments should return 404."""
+        self.repo.countries.return_value = ["Canada", "United States"]
+
+        response = self.client.get("/country?entisdhwuo")
+
+        self.assertEqual(response.status_code, 404)
 
 
 class TestFlaskHtmlRoutes(unittest.TestCase):
@@ -85,6 +83,27 @@ class TestFlaskHtmlRoutes(unittest.TestCase):
         self.assertIn(b"2020", response.data)
         self.assertIn(b"1.2", response.data)
         self.assertIn(b"1,000", response.data)
+
+    def test_country_page_defaults_latest_year_when_year_is_missing(self) -> None:
+        """The dashboard should use the latest matching year when year is omitted."""
+        self.repo.countries.return_value = ["Canada", "United States"]
+        self.repo.common_years_for_country.return_value = [2019, 2020]
+        self.repo.common_years.return_value = [2019, 2020]
+        self.repo.common_latest_year_for_country.return_value = 2020
+        self.repo.snapshot.return_value = {
+            "co2_per_capita": 1.23,
+            "forest_change": 1000.0,
+        }
+        self.repo.series.return_value = [
+            {"year": 2019, "co2_per_capita": 1.0, "forest_change": 900.0},
+            {"year": 2020, "co2_per_capita": 1.23, "forest_change": 1000.0},
+        ]
+
+        response = self.client.get("/country?entity=Canada")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Canada", response.data)
+        self.assertIn(b"2020", response.data)
 
     def test_country_page_missing_snapshot_returns_404(self) -> None:
         """The dashboard should 404 when no joined data exists."""

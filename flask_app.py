@@ -6,7 +6,7 @@ Website structure:
 - Dashboard page showing two metrics (deforestation & CO2) and a year-by-year table
 - About page
 
-Data is queried from a PostgreSQL database on stearns via the records library.
+Data for the dashboard comes from curated climate datasets.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from ProductionCode.db import get_db
 
 PROJECT_NAME = "Climate Data Explorer"
 UNITS = {"co2_per_capita": "t/person", "forest_change": "ha"}
+_COUNTRY_PAGE_ARGS = {"entity", "year"}
 
 api = Blueprint("api", __name__)
 
@@ -60,17 +61,6 @@ def _default_entity(entities: list[str]) -> str:
     return "United States" if "United States" in entities else entities[0]
 
 
-def _selected_entity(
-    entities: list[str],
-    fallback: str,
-    path_entity: Optional[str],
-) -> str:
-    """read a valid entity from the path/query string or fall back"""
-    raw = request.args.get("entity") or path_entity or ""
-    normalized = _normalize_entity(raw)
-    return normalized if normalized in entities else fallback
-
-
 def _read_year(default_year: int) -> int:
     """read an integer year from the query string or return a default"""
     raw = (request.args.get("year") or "").strip()
@@ -86,6 +76,40 @@ def _selected_year(valid_years: list[int], fallback: int) -> int:
     """read a year and ensure it exists in a provided year list"""
     year = _read_year(fallback)
     return year if year in valid_years else fallback
+
+
+def _country_page_args_are_valid() -> bool:
+    """return whether the dashboard query string only uses supported args"""
+    return set(request.args).issubset(_COUNTRY_PAGE_ARGS)
+
+
+def _requested_country(
+    entities: list[str],
+    fallback: str,
+    path_entity: Optional[str],
+) -> str:
+    """read a country from the path/query string or raise 404"""
+    raw = request.args.get("entity") or path_entity or ""
+    if not raw:
+        return fallback
+    country = _normalize_entity(raw)
+    if country not in entities:
+        abort(404)
+    return country
+
+
+def _requested_year(valid_years: list[int], fallback: int) -> int:
+    """read a year for the dashboard or raise 404 for invalid input"""
+    raw = (request.args.get("year") or "").strip()
+    if not raw:
+        return fallback
+    try:
+        year = int(raw)
+    except ValueError:
+        abort(404)
+    if year not in valid_years:
+        abort(404)
+    return year
 
 
 def _api_country(entity: str) -> tuple[ClimateRepository, str]:
@@ -192,10 +216,15 @@ def _register_pages(app: Flask) -> None:
         """render the dashboard page for a selected country/year"""
         repo = _repo()
         entities = repo.countries()
+        if not _country_page_args_are_valid():
+            abort(404)
         default_entity = _default_entity(entities)
-        chosen_entity = _selected_entity(entities, default_entity, entity)
+        chosen_entity = _requested_country(entities, default_entity, entity)
         years = repo.common_years_for_country(chosen_entity) or repo.common_years()
-        year = _selected_year(years, repo.common_latest_year_for_country(chosen_entity))
+        latest_year = repo.common_latest_year_for_country(chosen_entity)
+        if latest_year not in years and years:
+            latest_year = years[-1]
+        year = _requested_year(years, latest_year)
         snapshot = repo.snapshot(chosen_entity, year)
         if snapshot is None:
             abort(404)
@@ -246,7 +275,7 @@ def _register_error_handlers(app: Flask) -> None:
             render_template(
                 "404.html",
                 project=PROJECT_NAME,
-                path=request.path,
+                path=request.full_path.rstrip("?"),
                 example=example,
             ),
             404,

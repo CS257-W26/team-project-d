@@ -47,6 +47,15 @@ flask --app flask_app:create_app run --host 0.0.0.0 --port YOUR_PORT
 
 If you type an incorrect URL, the 404 page includes links and an example dashboard URL to get back on track.
 
+## Accessibility
+
+- Text can be resized to 150–200% without losing content or navigation because the layout uses flexible containers and scalable text sizes.
+- Headings structure each page so screen-reader users and sighted users can quickly understand the page hierarchy.
+- The site does not use decorative or content images in the current interface, so there are no missing alt-text issues.
+- Colors and contrast were chosen for readability, and focus styles make keyboard navigation visible.
+- Forms use matching `label for` and `id` attributes so each control has a clear accessible name.
+- Navigation links and example links make sense out of context because they describe their destinations directly.
+
 ## Running the CLI
 
 Forest change (defaults to latest year for that metric):
