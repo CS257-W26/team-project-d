@@ -60,6 +60,7 @@ class TestFlaskHtmlRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Explore climate signals", response.data)
         self.assertIn(b"Canada", response.data)
+        self.assertIn(b"Start typing to filter the country list.", response.data)
 
     def test_country_page_renders_selected_country(self) -> None:
         """The dashboard should render with metrics and a table."""
@@ -83,6 +84,28 @@ class TestFlaskHtmlRoutes(unittest.TestCase):
         self.assertIn(b"2020", response.data)
         self.assertIn(b"1.2", response.data)
         self.assertIn(b"1,000", response.data)
+        self.assertIn('CO₂ trend'.encode('utf-8'), response.data)
+        self.assertIn(b"Forest change trend", response.data)
+
+
+    def test_country_page_renders_single_point_charts(self) -> None:
+        """The dashboard should still render charts when the series has one row."""
+        self.repo.countries.return_value = ["Canada", "United States"]
+        self.repo.common_years_for_country.return_value = [2020]
+        self.repo.common_years.return_value = [2020]
+        self.repo.common_latest_year_for_country.return_value = 2020
+        self.repo.snapshot.return_value = {
+            "co2_per_capita": 1.23,
+            "forest_change": 1000.0,
+        }
+        self.repo.series.return_value = [
+            {"year": 2020, "co2_per_capita": 1.23, "forest_change": 1000.0},
+        ]
+
+        response = self.client.get("/country?entity=Canada&year=2020")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"trend-svg", response.data)
 
     def test_country_page_defaults_latest_year_when_year_is_missing(self) -> None:
         """The dashboard should use the latest matching year when year is omitted."""

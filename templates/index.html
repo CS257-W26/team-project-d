@@ -3,29 +3,34 @@
 {% block title %}Home • {{ project }}{% endblock %}
 
 {% block content %}
-  <section class="hero" aria-labelledby="page-title">
+  <section class="hero">
     <div class="hero-text">
-      <h1 id="page-title">Explore climate signals, fast.</h1>
+      <h1>Explore climate signals by country and year</h1>
       <p class="lead">
-        A simple way to explore two climate indicators by country and year.
+        View a country dashboard with two metrics: CO₂ per capita and annual change in
+        forest area. Start on the form, then scan the dashboard cards, charts, and table.
       </p>
     </div>
 
     <div class="hero-card">
-      <h2 class="h3">Pick a country and year</h2>
+      <h2 class="h3">Open the dashboard</h2>
       <form class="form" action="{{ url_for('country_page') }}" method="get">
         <div class="form-row">
           <label for="entity">Country</label>
-          <select id="entity" name="entity" required>
+          <input
+            id="entity"
+            name="entity"
+            list="country-options"
+            value="{{ default_entity }}"
+            required
+            autocomplete="off"
+          />
+          <datalist id="country-options">
             {% for e in entities %}
-              <option
-                value="{{ e }}"
-                {% if e == default_entity %}selected{% endif %}
-              >
-                {{ e }}
-              </option>
+              <option value="{{ e }}"></option>
             {% endfor %}
-          </select>
+          </datalist>
+          <p class="small muted form-help">Start typing to filter the country list.</p>
         </div>
 
         <div class="form-row">
@@ -48,25 +53,19 @@
   </section>
 
   <section class="grid" aria-label="What you can do">
-    <a href="{{ url_for('country_page') }}" class="card-link">
-      <article class="card">
-        <h2 class="h3">Scan</h2>
-        <p>Use the dashboard cards to read the key numbers at a glance.</p>
-      </article>
-    </a>
+    <article class="card">
+      <h2 class="h3">Scan</h2>
+      <p>Read the key numbers first, then glance at the charts for overall trends.</p>
+    </article>
 
-    <a href="{{ url_for('country_page') }}" class="card-link">
-      <article class="card">
-        <h2 class="h3">Compare</h2>
-        <p>The table shows year-by-year values for the same country.</p>
-      </article>
-    </a>
+    <article class="card">
+      <h2 class="h3">Compare</h2>
+      <p>The dashboard combines both metrics for the same country and year.</p>
+    </article>
 
-    <a href="{{ url_for('about_page') }}" class="card-link">
-      <article class="card">
-        <h2 class="h3">Learn</h2>
-        <p>Visit About for the sources behind the dashboard.</p>
-      </article>
-    </a>
+    <article class="card">
+      <h2 class="h3">Learn</h2>
+      <p>Visit About for the datasets and citations behind the dashboard.</p>
+    </article>
   </section>
 {% endblock %}
