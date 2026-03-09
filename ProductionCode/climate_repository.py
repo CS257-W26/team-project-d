@@ -118,6 +118,18 @@ class ClimateRepository:
                 years.append(int(year))
         return years
 
+    def _latest_year(self, sql: str, entity: str) -> int:
+        """Return the year from a MAX(year) query, or 0 if none exists."""
+        row = self._first(self._db.query(sql, entity=entity))
+        year = self._item(row, "year")
+        return int(year) if year is not None else 0
+
+    def _metric_value(self, sql: str, entity: str, year: int) -> Optional[float]:
+        """Return a single numeric metric value for a country and year."""
+        row = self._first(self._db.query(sql, entity=entity, year=year))
+        value = self._item(row, "value")
+        return float(value) if value is not None else None
+
     def countries(self) -> list[str]:
         """Return the list of countries supported by this app."""
         rows = self._db.query(_SQL_COUNTRIES)
@@ -141,33 +153,23 @@ class ClimateRepository:
 
     def forest_latest_year_for_country(self, entity: str) -> int:
         """Return the latest forest-change year available for a country."""
-        row = self._first(self._db.query(_SQL_FOREST_LATEST_YEAR_ENTITY, entity=entity))
-        year = self._item(row, "year")
-        return int(year) if year is not None else 0
+        return self._latest_year(_SQL_FOREST_LATEST_YEAR_ENTITY, entity)
 
     def co2_latest_year_for_country(self, entity: str) -> int:
         """Return the latest CO₂ per-capita year available for a country."""
-        row = self._first(self._db.query(_SQL_CO2_LATEST_YEAR_ENTITY, entity=entity))
-        year = self._item(row, "year")
-        return int(year) if year is not None else 0
+        return self._latest_year(_SQL_CO2_LATEST_YEAR_ENTITY, entity)
 
     def common_latest_year_for_country(self, entity: str) -> int:
         """Return the latest year where both datasets have values for a country."""
-        row = self._first(self._db.query(_SQL_COMMON_LATEST_YEAR_ENTITY, entity=entity))
-        year = self._item(row, "year")
-        return int(year) if year is not None else 0
+        return self._latest_year(_SQL_COMMON_LATEST_YEAR_ENTITY, entity)
 
     def forest_value(self, entity: str, year: int) -> Optional[float]:
         """Return forest-change value for a country/year."""
-        row = self._first(self._db.query(_SQL_FOREST_VALUE, entity=entity, year=year))
-        value = self._item(row, "value")
-        return float(value) if value is not None else None
+        return self._metric_value(_SQL_FOREST_VALUE, entity, year)
 
     def co2_value(self, entity: str, year: int) -> Optional[float]:
         """Return CO₂ per-capita value for a country/year."""
-        row = self._first(self._db.query(_SQL_CO2_VALUE, entity=entity, year=year))
-        value = self._item(row, "value")
-        return float(value) if value is not None else None
+        return self._metric_value(_SQL_CO2_VALUE, entity, year)
 
     def snapshot(self, entity: str, year: int) -> Optional[dict[str, float]]:
         """Return both metrics for a country/year, if available."""

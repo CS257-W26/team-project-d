@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Optional
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 from ProductionCode.climate_repository import (
     CO2_COLUMN,
@@ -28,8 +29,18 @@ FOREST_UNIT = "ha"
 CO2_UNIT = "t/person"
 
 
+@dataclass(frozen=True)
+class MetricSpec:
+    """Describe how one CLI feature resolves years and numeric values."""
+
+    column_name: str
+    unit: str
+    latest_year_for_country: Callable[[str], int]
+    value_for_year: Callable[[str, int], Optional[float]]
+
+
 def _add_features(parser: argparse.ArgumentParser) -> None:
-    """add mutually-exclusive feature flags"""
+    """Add mutually-exclusive feature flags."""
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--deforestation",
@@ -44,12 +55,12 @@ def _add_features(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_options(parser: argparse.ArgumentParser) -> None:
-    """add shared options used across features"""
+    """Add shared options used across features."""
     parser.add_argument("--year", type=int, default=None, help="Year (default: latest).")
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """build and return the CLI argument parser"""
+    """Build and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="command_line.py",
         description="Query climate datasets.",
@@ -60,82 +71,74 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _resolve_country(repo: ClimateRepository, raw: str) -> Optional[str]:
-    """resolve a user-supplied country string to a canonical database name"""
+    """Resolve a user-supplied country string to a canonical database name."""
     normalized = raw.replace("_", " ").strip()
     return repo.resolve_country(normalized)
 
 
 def _print_error(message: str) -> int:
-    """print an error to stderr and return a non-zero exit code"""
+    """Print an error to stderr and return a non-zero exit code."""
     print(message, file=sys.stderr)
     return 2
 
 
-def _deforestation(
+def _metric_specs(repo: ClimateRepository) -> dict[str, MetricSpec]:
+    """Return the lookup behavior for each CLI feature."""
+    return {
+        "deforestation": MetricSpec(
+            FOREST_CHANGE_COLUMN,
+            FOREST_UNIT,
+            repo.forest_latest_year_for_country,
+            repo.forest_value,
+        ),
+        "co2": MetricSpec(
+            CO2_COLUMN,
+            CO2_UNIT,
+            repo.co2_latest_year_for_country,
+            repo.co2_value,
+        ),
+    }
+
+
+def _selected_metric(
+    args: argparse.Namespace,
+    specs: dict[str, MetricSpec],
+) -> tuple[MetricSpec, str]:
+    """Return the chosen metric spec and raw country argument."""
+    for argument_name, spec in specs.items():
+        raw_entity = getattr(args, argument_name)
+        if raw_entity:
+            return spec, raw_entity
+    raise ValueError("No feature selected")
+
+
+def _lookup_metric(
     repo: ClimateRepository,
+    spec: MetricSpec,
     raw_entity: str,
     year: Optional[int],
 ) -> tuple[str, int, float]:
-    """get forest change for a country and year (defaulting year if needed)"""
+    """Return the resolved country, chosen year, and numeric value."""
     entity = _resolve_country(repo, raw_entity)
     if not entity:
         raise ValueError("Unknown country")
-    chosen_year = year or repo.forest_latest_year_for_country(entity)
-    value = repo.forest_value(entity, chosen_year)
-    if value is None:
-        raise ValueError("No data for that year")
-    return entity, chosen_year, value
-
-
-def _co2(
-    repo: ClimateRepository,
-    raw_entity: str,
-    year: Optional[int],
-) -> tuple[str, int, float]:
-    """get CO₂ per-capita for a country and year (defaulting year if needed)"""
-    entity = _resolve_country(repo, raw_entity)
-    if not entity:
-        raise ValueError("Unknown country")
-    chosen_year = year or repo.co2_latest_year_for_country(entity)
-    value = repo.co2_value(entity, chosen_year)
+    chosen_year = year or spec.latest_year_for_country(entity)
+    value = spec.value_for_year(entity, chosen_year)
     if value is None:
         raise ValueError("No data for that year")
     return entity, chosen_year, value
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    """run the CLI and return an exit code"""
+    """Run the CLI and return an exit code."""
     args = build_parser().parse_args(argv)
     repo = ClimateRepository(get_db())
+    specs = _metric_specs(repo)
 
     try:
-        if args.deforestation:
-            entity, year, value = _deforestation(
-                repo,
-                args.deforestation,
-                args.year,
-            )
-            print(
-                format_single_value(
-                    entity,
-                    year,
-                    FOREST_CHANGE_COLUMN,
-                    value,
-                    FOREST_UNIT,
-                )
-            )
-            return 0
-
-        entity, year, value = _co2(repo, args.co2, args.year)
-        print(
-            format_single_value(
-                entity,
-                year,
-                CO2_COLUMN,
-                value,
-                CO2_UNIT,
-            )
-        )
+        spec, raw_entity = _selected_metric(args, specs)
+        entity, year, value = _lookup_metric(repo, spec, raw_entity, args.year)
+        print(format_single_value(entity, year, spec.column_name, value, spec.unit))
         return 0
     except ValueError as exc:
         return _print_error(f"Error: {exc}")

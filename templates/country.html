@@ -28,6 +28,66 @@
     </article>
   </section>
 
+  <section class="chart-grid" aria-label="Trend charts">
+    <article class="card chart-card">
+      <h2 class="h3">{{ co2_chart.title }}</h2>
+      <figure class="chart-figure">
+        <svg
+          class="trend-svg"
+          viewBox="0 0 360 140"
+          role="img"
+          aria-labelledby="co2-chart-title co2-chart-desc"
+        >
+          <title id="co2-chart-title">CO₂ per capita trend for {{ entity }}</title>
+          <desc id="co2-chart-desc">
+            Line chart from {{ co2_chart.start_year }} to {{ co2_chart.end_year }} with
+            the selected year highlighted.
+          </desc>
+          <polyline class="trend-line" points="{{ co2_chart.points }}"></polyline>
+          <circle
+            class="trend-marker"
+            cx="{{ co2_chart.selected_x }}"
+            cy="{{ co2_chart.selected_y }}"
+            r="4"
+          ></circle>
+        </svg>
+        <figcaption class="small muted">
+          {{ co2_chart.start_year }}–{{ co2_chart.end_year }} •
+          min {{ co2_chart.min_label }} • max {{ co2_chart.max_label }}
+        </figcaption>
+      </figure>
+    </article>
+
+    <article class="card chart-card">
+      <h2 class="h3">{{ forest_chart.title }}</h2>
+      <figure class="chart-figure">
+        <svg
+          class="trend-svg"
+          viewBox="0 0 360 140"
+          role="img"
+          aria-labelledby="forest-chart-title forest-chart-desc"
+        >
+          <title id="forest-chart-title">Forest change trend for {{ entity }}</title>
+          <desc id="forest-chart-desc">
+            Line chart from {{ forest_chart.start_year }} to {{ forest_chart.end_year }}
+            with the selected year highlighted.
+          </desc>
+          <polyline class="trend-line" points="{{ forest_chart.points }}"></polyline>
+          <circle
+            class="trend-marker"
+            cx="{{ forest_chart.selected_x }}"
+            cy="{{ forest_chart.selected_y }}"
+            r="4"
+          ></circle>
+        </svg>
+        <figcaption class="small muted">
+          {{ forest_chart.start_year }}–{{ forest_chart.end_year }} •
+          min {{ forest_chart.min_label }} • max {{ forest_chart.max_label }}
+        </figcaption>
+      </figure>
+    </article>
+  </section>
+
   <section class="card">
     <h2 class="h3">Year-by-year</h2>
     <div class="table-wrap">
@@ -58,13 +118,20 @@
     <form class="form form-inline" action="{{ url_for('country_page') }}" method="get">
       <div class="form-row">
         <label for="entity2">Country</label>
-        <select id="entity2" name="entity" required>
+        <input
+          id="entity2"
+          name="entity"
+          list="country-options-inline"
+          value="{{ entity }}"
+          required
+          autocomplete="off"
+        />
+        <datalist id="country-options-inline">
           {% for e in entities %}
-            <option value="{{ e }}" {% if e == entity %}selected{% endif %}>
-              {{ e }}
-            </option>
+            <option value="{{ e }}"></option>
           {% endfor %}
-        </select>
+        </datalist>
+        <p class="small muted form-help">Start typing to filter the country list.</p>
       </div>
 
       <div class="form-row">

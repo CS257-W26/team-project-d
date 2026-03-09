@@ -7,7 +7,7 @@ This repository contains a database-driven web app (Flask + PostgreSQL) for expl
 - CO₂ emissions per capita (tonnes per person)
 - Annual change in forest area (hectares)
 
-The user-facing website front-end design: a homepage form and a single dashboard page that shows both metrics and a year-by-year table.
+The user-facing website includes a homepage form and a dashboard page that shows both metrics, trend charts, and a year-by-year table.
 
 ## Repository structure
 
@@ -20,7 +20,6 @@ The user-facing website front-end design: a homepage form and a single dashboard
 - `Data/schema.sql` – SQL schema for the team database (no CSV files are used)
 
 ## Running the website
-
 
 ### On stearns
 
@@ -41,9 +40,9 @@ flask --app flask_app:create_app run --host 0.0.0.0 --port YOUR_PORT
 
 ## Using the website
 
-- Scanning: The dashboard uses clear headings and a two-card summary so you can quickly scan the key numbers for the selected year.
+- Scanning: The dashboard uses clear headings, two summary cards, and trend charts so you can quickly scan the key numbers and overall direction for the selected country.
 - Satisficing: The homepage defaults to a valid country and the latest year with data; you can get useful results without tuning options.
-- Muddling through: The year-by-year table lets you explore trends gradually (try different years/countries and compare).
+- Muddling through: The year-by-year table lets you explore trends gradually (try different years and countries and compare).
 
 If you type an incorrect URL, the 404 page includes links and an example dashboard URL to get back on track.
 
@@ -102,3 +101,29 @@ python3 -m unittest discover -s Tests
 - `records` – database connection + query execution against PostgreSQL
 - `argparse` – parsing command-line arguments
 - `unittest` / `unittest.mock` – automated testing and patching
+
+## TD5 Design Improvements
+
+### Option A: Code Design Improvements
+
+#### 1. Duplicate command-line feature logic
+- Code smell / issue: `command_line.py` had duplicate logic for the deforestation and CO₂ features. Both branches repeated country resolution, default-year lookup, missing-data handling, and output formatting.
+- Files and approximate lines: `command_line.py`, especially the metric selection and lookup logic around lines 26–127.
+- What we changed: We introduced a small `MetricSpec` data class and a shared lookup flow (`_metric_specs`, `_selected_metric`, and `_lookup_metric`). The two CLI features now reuse one path for validation, default-year handling, and formatting instead of maintaining parallel branches.
+
+#### 2. Duplicate repository query wrappers
+- Code smell / issue: `ProductionCode/climate_repository.py` had repeated helper logic for “latest year” queries and for single-value metric queries. The forest and CO₂ methods used almost identical code with different SQL constants.
+- Files and approximate lines: `ProductionCode/climate_repository.py`, especially the shared query helpers and metric accessors around lines 88–164.
+- What we changed: We extracted `_latest_year` and `_metric_value` helpers so the public repository methods focus on the meaning of each query rather than repeating the same row extraction code. This keeps the metric-specific methods short and easier to maintain.
+
+### Option B: Front-End Design Improvements
+
+#### 1. Searchable country picker
+- Usability issue: The dashboard used a long country dropdown. With 235 countries, it was slow to scan and hard to use when the user already knew the country name they wanted.
+- Page where we made the change: `templates/index.html` and `templates/country.html`.
+- What we changed: We replaced the long dropdown with a text input backed by a `datalist`. Users can now type to filter the available countries while still getting guided suggestions from the dataset.
+
+#### 2. Trend charts for quicker comparison
+- Usability issue: The table contained useful history, but it required too much scanning to notice overall trends quickly.
+- Page where we made the change: `templates/country.html` with supporting view logic in `flask_app.py` and styling in `static/styles.css`.
+- What we changed: We added two small SVG trend charts, one for CO₂ per capita and one for forest change. The currently selected year is highlighted, and each chart includes a short legend with the year range and min/max values so users can compare patterns faster before reading the full table.

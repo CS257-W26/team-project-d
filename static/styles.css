@@ -6,6 +6,8 @@
   --border: #e5e7ef;
   --focus: #2a5bd7;
   --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --line: #3555c8;
+  --marker: #151a2d;
 }
 
 * {
@@ -27,6 +29,7 @@ a {
 
 a:focus,
 button:focus,
+input:focus,
 select:focus {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
@@ -149,11 +152,6 @@ select:focus {
   padding: 1.25rem;
 }
 
-.card-link {
-  text-decoration: none;
-  color: inherit;
-}
-
 .form {
   display: grid;
   gap: 0.9rem;
@@ -161,7 +159,11 @@ select:focus {
 
 .form-inline {
   grid-template-columns: 1fr 1fr auto;
-  align-items: end;
+  align-items: start;
+}
+
+.form-inline > .button {
+  align-self: end;
 }
 
 .form-row {
@@ -169,15 +171,21 @@ select:focus {
   gap: 0.35rem;
 }
 
+.form-help {
+  margin: 0;
+}
+
 label {
   font-weight: 600;
 }
 
+input,
 select {
   padding: 0.55rem 0.65rem;
   border-radius: 0.6rem;
   border: 1px solid var(--border);
   background: var(--surface);
+  font: inherit;
 }
 
 .button {
@@ -248,6 +256,42 @@ select {
   color: var(--muted);
 }
 
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.chart-card {
+  padding-bottom: 1rem;
+}
+
+.chart-figure {
+  margin: 0;
+}
+
+.trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #fbfcff 0%, #f2f5ff 100%);
+  border: 1px solid var(--border);
+}
+
+.trend-line {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.trend-marker {
+  fill: var(--marker);
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -286,14 +330,9 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .grid,
+  .metric-grid,
+  .chart-grid,
   .form-inline {
     grid-template-columns: 1fr;
   }
