@@ -159,11 +159,7 @@ select:focus {
 
 .form-inline {
   grid-template-columns: 1fr 1fr auto;
-  align-items: start;
-}
-
-.form-inline > .button {
-  align-self: end;
+  align-items: end;
 }
 
 .form-row {

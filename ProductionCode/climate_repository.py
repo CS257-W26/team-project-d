@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ProductionCode.entity_utils import match_entity_name
+from ProductionCode.query_adapter import QueryResultAdapter
 
 FOREST_CHANGE_COLUMN = "Annual change in forest area"
 CO2_COLUMN = "Annual CO₂ emissions (per capita)"
@@ -92,48 +93,31 @@ class ClimateRepository:
         self._db = db
 
     @staticmethod
-    def _first(rows: Any) -> Optional[Any]:
-        """Return the first row from a records result or list-like collection."""
-        if hasattr(rows, "first"):
-            return rows.first()
-        return rows[0] if rows else None
-
-    @staticmethod
-    def _item(row: Optional[Any], key: str) -> Optional[Any]:
-        """Return a value from a row object, or None when unavailable."""
-        if row is None:
-            return None
-        try:
-            return row[key]
-        except (KeyError, TypeError):
-            return None
-
-    @staticmethod
-    def _years_from_rows(rows: Any) -> list[int]:
-        """Extract non-null integer years from an iterable of rows."""
+    def _years_from_rows(rows: QueryResultAdapter) -> list[int]:
+        """Extract non-null integer years from an iterable of adapted rows."""
         years = []
         for row in rows:
-            year = row["year"]
+            year = row.get("year")
             if year is not None:
                 years.append(int(year))
         return years
 
     def _latest_year(self, sql: str, entity: str) -> int:
         """Return the year from a MAX(year) query, or 0 if none exists."""
-        row = self._first(self._db.query(sql, entity=entity))
-        year = self._item(row, "year")
+        row = QueryResultAdapter(self._db.query(sql, entity=entity)).first()
+        year = row.get("year")
         return int(year) if year is not None else 0
 
     def _metric_value(self, sql: str, entity: str, year: int) -> Optional[float]:
         """Return a single numeric metric value for a country and year."""
-        row = self._first(self._db.query(sql, entity=entity, year=year))
-        value = self._item(row, "value")
+        row = QueryResultAdapter(self._db.query(sql, entity=entity, year=year)).first()
+        value = row.get("value")
         return float(value) if value is not None else None
 
     def countries(self) -> list[str]:
         """Return the list of countries supported by this app."""
-        rows = self._db.query(_SQL_COUNTRIES)
-        return [row["entity"] for row in rows]
+        rows = QueryResultAdapter(self._db.query(_SQL_COUNTRIES))
+        return [row.get("entity") for row in rows if row.get("entity") is not None]
 
     def resolve_country(self, raw: str) -> Optional[str]:
         """Match user input to a canonical country name, if possible."""
@@ -144,11 +128,12 @@ class ClimateRepository:
 
     def common_years(self) -> list[int]:
         """Return years where both datasets have data for at least one country."""
-        return self._years_from_rows(self._db.query(_SQL_COMMON_YEARS))
+        rows = QueryResultAdapter(self._db.query(_SQL_COMMON_YEARS))
+        return self._years_from_rows(rows)
 
     def common_years_for_country(self, entity: str) -> list[int]:
         """Return years where both datasets have data for the given country."""
-        rows = self._db.query(_SQL_COMMON_YEARS_ENTITY, entity=entity)
+        rows = QueryResultAdapter(self._db.query(_SQL_COMMON_YEARS_ENTITY, entity=entity))
         return self._years_from_rows(rows)
 
     def forest_latest_year_for_country(self, entity: str) -> int:
@@ -173,11 +158,9 @@ class ClimateRepository:
 
     def snapshot(self, entity: str, year: int) -> Optional[dict[str, float]]:
         """Return both metrics for a country/year, if available."""
-        row = self._first(self._db.query(_SQL_SNAPSHOT, entity=entity, year=year))
-        if row is None:
-            return None
-        co2_value = self._item(row, "co2_per_capita")
-        forest_value = self._item(row, "forest_change")
+        row = QueryResultAdapter(self._db.query(_SQL_SNAPSHOT, entity=entity, year=year)).first()
+        co2_value = row.get("co2_per_capita")
+        forest_value = row.get("forest_change")
         if co2_value is None or forest_value is None:
             return None
         return {
@@ -187,12 +170,12 @@ class ClimateRepository:
 
     def series(self, entity: str) -> list[dict[str, float]]:
         """Return year-by-year data with both metrics for a country."""
-        rows = self._db.query(_SQL_SERIES, entity=entity)
+        rows = QueryResultAdapter(self._db.query(_SQL_SERIES, entity=entity))
         return [
             {
-                "year": int(row["year"]),
-                "co2_per_capita": float(row["co2_per_capita"]),
-                "forest_change": float(row["forest_change"]),
+                "year": int(row.get("year")),
+                "co2_per_capita": float(row.get("co2_per_capita")),
+                "forest_change": float(row.get("forest_change")),
             }
             for row in rows
         ]
