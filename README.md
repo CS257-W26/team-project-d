@@ -116,6 +116,11 @@ python3 -m unittest discover -s Tests
 - Files and approximate lines: `ProductionCode/climate_repository.py`, especially the shared query helpers and metric accessors around lines 88–164.
 - What we changed: We extracted `_latest_year` and `_metric_value` helpers so the public repository methods focus on the meaning of each query rather than repeating the same row extraction code. This keeps the metric-specific methods short and easier to maintain.
 
+#### 3. Records-result coupling in the repository (Adapter pattern)
+- Code smell / issue: `ProductionCode/climate_repository.py` still knew too much about the low-level shape of database results. It mixed business queries with details about whether a row came from the `records` library or from a simple list/dictionary test double.
+- Files and approximate lines: `ProductionCode/query_adapter.py` (adapter classes around lines 1–36) and `ProductionCode/climate_repository.py` (adapter usage around lines 88–163).
+- What we changed: We added a small Adapter layer (`QueryResultAdapter` and `RowAdapter`) that presents one consistent interface for query results and individual rows. The repository now asks the adapter for the first row or for a value by key instead of branching on the concrete result type. This matches the Adapter pattern discussed in class: rather than rewriting the app around a library-specific result object, we wrapped that object behind an interface that fits our existing repository code and test doubles.
+
 ### Option B: Front-End Design Improvements
 
 #### 1. Searchable country picker
