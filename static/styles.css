@@ -1,19 +1,13 @@
 :root {
   --bg: #f4f6fb;
   --surface: #ffffff;
-
   --text: #1c2138;
   --muted: #6b7285;
-
   --border: #e2e6f3;
-
   --focus: #4f6ef7;
-
   --shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-
   --accent: #4f6ef7;
   --accent-soft: #eef2ff;
-
   --line: #4f6ef7;
   --marker: #2f3b8f;
 }
@@ -67,8 +61,9 @@ select:focus {
 .site-header {
   position: sticky;
   top: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: #2f3b8f;
+  color: white;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
   z-index: 10;
 }
 
