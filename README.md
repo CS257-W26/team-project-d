@@ -132,3 +132,9 @@ python3 -m unittest discover -s Tests
 - Usability issue: The table contained useful history, but it required too much scanning to notice overall trends quickly.
 - Page where we made the change: `templates/country.html` with supporting view logic in `flask_app.py` and styling in `static/styles.css`.
 - What we changed: We added two small SVG trend charts, one for CO₂ per capita and one for forest change. The currently selected year is highlighted, and each chart includes a short legend with the year range and min/max values so users can compare patterns faster before reading the full table.
+
+#### 3. Added color for better visualization
+Added color for clearer visual hierarchy
+- Usability issue: The original interface used mostly black, white, and gray elements. While functional, the lack of color made it harder for users to quickly distinguish interactive elements (e.g. navigation and buttons) from static content.
+- Page where we made the change: Global styling in `static/styles.css`, which affects all pages including `templates/index.html` and `templates/country.html`.
+- What we changed: We introduced a green color palette to improve visual hierarchy and keep thematic consistency with our deforestation theme. The header, chart lines, and buttons now use green. This makes navigation elements more noticeable and allows crucial functions to stand out for better user usage.
