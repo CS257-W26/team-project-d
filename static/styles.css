@@ -1,15 +1,13 @@
 :root {
-  --bg: #f4f6fb;
+  --bg: #f4f8f5;
   --surface: #ffffff;
-  --text: #1c2138;
-  --muted: #6b7285;
-  --border: #e2e6f3;
-  --focus: #4f6ef7;
-  --shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-  --accent: #4f6ef7;
-  --accent-soft: #eef2ff;
-  --line: #4f6ef7;
-  --marker: #2f3b8f;
+  --text: #16211c;
+  --muted: #5c6f63;
+  --border: #e3ebe6;
+  --focus: #2e8b57;
+  --shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --line: #2e8b57;
+  --marker: #1f5f3e;
 }
 
 * {
@@ -61,7 +59,7 @@ select:focus {
 .site-header {
   position: sticky;
   top: 0;
-  background: #2f3b8f;
+  background: #2e8b57;
   color: white;
   border-bottom: 1px solid rgba(255,255,255,0.15);
   z-index: 10;
@@ -201,7 +199,7 @@ select {
   border: 0;
   border-radius: 0.75rem;
   padding: 0.65rem 0.9rem;
-  background: var(--accent);
+  background: var(--focus);
   color: white;
   font-weight: 700;
   cursor: pointer;
