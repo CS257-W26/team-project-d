@@ -53,19 +53,25 @@
   </section>
 
   <section class="grid" aria-label="What you can do">
-    <article class="card">
-      <h2 class="h3">Scan</h2>
-      <p>Read the key numbers first, then glance at the charts for overall trends.</p>
-    </article>
+    <a href="{{ url_for('country_page') }}" class="card-link">
+      <article class="card">
+        <h2 class="h3">Scan</h2>
+        <p>Read the key numbers first, then glance at the charts for overall trends.</p>
+      </article>
+    </a>
 
-    <article class="card">
-      <h2 class="h3">Compare</h2>
-      <p>The dashboard combines both metrics for the same country and year.</p>
-    </article>
+    <a href="{{ url_for('country_page') }}" class="card-link">
+      <article class="card">
+        <h2 class="h3">Compare</h2>
+        <p>The dashboard combines both metrics for the same country and year.</p>
+      </article>
+    </a>
 
-    <article class="card">
-      <h2 class="h3">Learn</h2>
-      <p>Visit About for the datasets and citations behind the dashboard.</p>
-    </article>
+    <a href="{{ url_for('about_page') }}" class="card-link">
+      <article class="card">
+        <h2 class="h3">Learn</h2>
+        <p>Visit About for the datasets and citations behind the dashboard.</p>
+      </article>
+    </a>
   </section>
 {% endblock %}
