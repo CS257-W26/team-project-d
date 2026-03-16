@@ -104,6 +104,8 @@ python3 -m unittest discover -s Tests
 
 ## TD5 Design Improvements
 
+### If possible, when reviewing the older tags, we would greatly appreciate it if you could also consider team-d-week-9-revision-td4 (instead of just front-end), as it more accurately represents the more complete state of our code before TD5 improvements.
+
 ### Option A: Code Design Improvements
 
 #### 1. Duplicate command-line feature logic
